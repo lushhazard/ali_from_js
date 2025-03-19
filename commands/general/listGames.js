@@ -18,7 +18,7 @@ module.exports = {
         }
 
         // Format the list of games to show in a readable way
-        const gameList = games.map(game => `**${game.gameName}** - Max Players: ${game.maxPlayers}, Winners: ${game.numWinners}`).join('\n');
+        const gameList = games.map(game => `**${game.gameName}** - Description: ${game.description}`).join('\n');
 
         // Send the list of games as a reply
         interaction.reply(`Games being tracked in this server:\n${gameList}`);

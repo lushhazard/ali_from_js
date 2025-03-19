@@ -9,22 +9,6 @@ module.exports = {
             option.setName('game')
                 .setDescription('The name of the game to add')
                 .setRequired(true))
-        .addIntegerOption(option =>
-            option.setName('winthreshold')
-                .setDescription('Lowest rank counted as winner')
-                .setRequired(true))
-        .addIntegerOption(option =>
-            option.setName('maxplayers')
-                .setDescription('Maximum number of players')
-                .setMinValue(2)
-                .setMaxValue(10)
-                .setRequired(true))
-        .addIntegerOption(option =>
-            option.setName('minplayers')
-                .setDescription('Minimum number of players')
-                .setMinValue(1)
-                .setMaxValue(10)
-                .setRequired(false))
         .addStringOption(option =>
             option.setName('description')
                 .setDescription('Optional description for the game')
@@ -38,8 +22,8 @@ module.exports = {
         const description = interaction.options.getString('description') || '';
         const guildId = interaction.guild.id;
 
-        if (!message.member.permissions.has('MANAGE_GUILD'))
-            return message.reply('You need "Manage Server" permission!');
+        if (!interaction.member.permissions.has('MANAGE_GUILD'))
+            return interaction.reply('You need "Manage Server" permission!');
         try {
             // Check if game already exists in the database
             let gameDetails = await GameDetails.findOne({ guildId, gameName });
@@ -52,9 +36,6 @@ module.exports = {
             gameDetails = new GameDetails({
                 guildId,
                 gameName,
-                maxPlayers,
-                minPlayers,
-                winThreshold,
                 description,
             });
 

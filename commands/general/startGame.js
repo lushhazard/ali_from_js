@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-let gameTimers = {}; // In-memory object to store ongoing game timers for each server
+const GameDetails = require('../../models/gameDetailsSchema');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -14,18 +14,24 @@ module.exports = {
         const gameName = interaction.options.getString('game').toLowerCase();
         const guildId = interaction.guild.id;
 
-        // Check if a game is already running for this server and game
-        if (gameTimers[guildId] && gameTimers[guildId][gameName]) {
-            return interaction.reply(`A \`${gameName}\` game is already in progress!`);
+        const gameDetails = await GameDetails.findOne({ guildId, gameName });
+
+        if (!gameDetails) {
+            return interaction.reply({
+                content: `The game \`${gameName}\` is not registered yet my friend. Please register it first.`,
+            });
         }
 
-        if (!gameTimers[guildId]) {
-            gameTimers[guildId] = {};
+        if (gameDetails.currentlyActive) {
+            return interaction.reply({
+                content: `A \`${gameName}\` game is already in progress!`,
+            });
         }
 
-        gameTimers[guildId][gameName] = {
-            startTime: Date.now(),
-        };
+        // Update game details in the database
+        gameDetails.currentlyActive = true;
+        gameDetails.gameTime = new Date();
+        await gameDetails.save();
 
         return interaction.reply(`My pocket watch is ticking.`);
     },

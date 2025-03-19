@@ -4,10 +4,8 @@ const { Schema, model } = require('mongoose');
 const gameDetailsSchema = new Schema({
     guildId: { type: String, required: true },
     gameName: { type: String, required: true, unique: true },
-    maxPlayers: { type: Number, required: true },
-    minPlayers: { type: Number, default: 1 },
-    winThreshold: { type: Number, required: true },
-    isActive: { type: Boolean, default: true },
+    currentlyActive: { type: Boolean, default: false },
+    gameTime: { type: Number, required: false },
     description: { type: String, default: '' },
     trackedAt: { type: Date, default: Date.now },
     gamesPlayed: { type: Number, default: 0 },

@@ -1,9 +1,7 @@
-const { ActionRowBuilder, UserSelectMenuBuilder, SlashCommandBuilder } = require('discord.js');
+const { ActionRowBuilder, UserSelectMenuBuilder, SlashCommandBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const GameLog = require('../../models/gameLogSchema');
 const GameDetails = require('../../models/gameDetailsSchema');
 const getGameModel = require('../../models/scoreboardSchema'); // The dynamically created game model
-
-const gameTimers = {}; // also initialized in startGame.js
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -21,29 +19,27 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        const gameName = interaction.options.getString('game');
-
+        const guildId = interaction.guild.id;
+        const gameName = interaction.options.getString('game').toLowerCase();
         const gameDetails = await GameDetails.findOne({ guildId, gameName });
 
         if (!gameDetails) {
             return interaction.reply({
-                content: `The game \`${gameName}\` is not registered yet. Please register it first using the appropriate command.`,
+                content: `The game \`${gameName}\` is not registered yet my friend. Please register it first.`,
             });
         }
 
         const providedTime = interaction.options.getInteger('time');
-        const guildId = interaction.guild.id;
         let gameTime = providedTime;
 
-        if (!gameTime && gameTimers[guildId] && gameTimers[guildId][gameName]) {
-            const gameStartTime = gameTimers[guildId][gameName].startTime;
+        if (!gameTime && gameDetails.currentlyActive) {
+            const gameStartTime = gameDetails.gameTime;
             // convert milliseconds to minutes
             gameTime = Math.floor((Date.now() - gameStartTime) / 60000);
         }
 
         // optionally, ask the user for the game time
         if (!gameTime) {
-            delete gameTimers[guildId][gameName];
             return await interaction.reply({
                 content: 'Please remember to provide the game duration my friend. (in minutes)',
             });
@@ -52,7 +48,8 @@ module.exports = {
         // if time is already available, proceed with the game results
         await handleGameFinish(interaction, gameName, gameTime);
 
-        delete gameTimers[guildId][gameName];
+        gameDetails.currentlyActive = false;
+        await gameDetails.save();
     },
 };
 
@@ -69,83 +66,110 @@ async function handleGameFinish(interaction, gameName, gameTime) {
         .setMinValues(1)
         .setMaxValues(10);
 
-    // Create an action row for each menu
+    const doneButton = new ButtonBuilder()
+        .setCustomId('done')
+        .setLabel('Done')
+        .setStyle(ButtonStyle.Success);
+
+    // Create action rows for UI
     const row1 = new ActionRowBuilder().addComponents(victorsSelect);
     const row2 = new ActionRowBuilder().addComponents(playersSelect);
+    const row3 = new ActionRowBuilder().addComponents(doneButton);
 
     await interaction.reply({
-        content: 'Please select the victors and players for this game:',
-        components: [row1, row2],
+        content: 'Please select the victors and players for this game, then press **Done**.',
+        components: [row1, row2, row3],
     });
 
-    // Set up a collector to handle the user's selections
+    // Collector to handle user interactions
     const collector = interaction.channel.createMessageComponentCollector({
-        componentType: 'USER_SELECT_MENU',
-        time: 60000, // 1-minute timeout for selection
+        time: 60000, // 1-minute timeout
     });
 
     let victors = [];
     let players = [];
 
     collector.on('collect', async (collectedInteraction) => {
-        if (collectedInteraction.customId === 'victors') {
-            victors = collectedInteraction.values; // store selected victor user ids
+        const { customId, values, user } = collectedInteraction;
+
+        if (customId === 'victors') {
+            victors = values;
             await collectedInteraction.update({
-                content: 'Victors selected: ' + victors.join(', '),
-                components: [],
+                content: `✔ **Victors selected:** ${victors.map(v => `<@${v}>`).join(', ')}`,
+                components: [row1, row2, row3], // Keep players & Done button
             });
-            console.log('Selected victors:', victors);
         }
 
-        if (collectedInteraction.customId === 'players') {
-            players = collectedInteraction.values; // store selected player user ids
+        else if (customId === 'players') {
+            players = values;
             await collectedInteraction.update({
-                content: 'Players selected: ' + players.join(', '),
-                components: [],
+                content: `✔ **Players selected:** ${players.map(p => `<@${p}>`).join(', ')}`,
+                components: [row1, row2, row3], // Keep victors & Done button
             });
-            console.log('Selected players:', players);
+        }
+
+        else if (customId === 'done') {
+            if (!victors.length || !players.length) {
+                return collectedInteraction.reply({ content: '❌ Please select both victors and players before finishing!', ephemeral: true });
+            }
 
             const losers = players.filter(playerId => !victors.includes(playerId));
 
-            await registerGameResults(victors, losers, interaction.guild.id, gameName, gameTime);
+            await registerGameResults(victors, losers, interaction, gameName, gameTime);
+            await updateScoreboard(victors, losers, interaction.guild.id, gameName);
 
-            // Stop the collector after processing the game results
+            await collectedInteraction.update({
+                content: `🎉 **Game results saved!**\n🏆 **Winners:** ${victors.map(v => `<@${v}>`).join(', ')}\n🎮 **Losers:** ${losers.map(l => `<@${l}>`).join(', ')}`,
+                components: [],
+            });
+
             collector.stop();
         }
     });
 
-    collector.on('end', (collected, reason) => {
+    collector.on('end', (_, reason) => {
         if (reason === 'time') {
-            interaction.followUp({
-                content: 'You took too long to select players. Please try again.',
-                components: [],
-            });
+            interaction.followUp({ content: '⏳ You took too long! Try again.', components: [] });
         }
     });
 }
 
-async function registerGameResults(victors, losers, guildId, gameName, gameTime) {
-    // save game log with winners, losers, game duration
-    const gameLog = new GameLog({
-        guildId,
-        gameName,
-        victors, // List of victor user IDs
-        losers,  // List of loser user IDs
-        gameTime, // Game duration in minutes
-        timestamp: Date.now(),
-    });
-
+async function registerGameResults(victors, losers, interaction, gameName, gameTime, interaction) {
     try {
-        await gameLog.save(); // Save the game log
-        console.log('Game results saved!');
-
-        // Now update the scoreboard for all players (both winners and losers)
-        await updateScoreboard(victors, losers, guildId, gameName);
+        if (!gameTime) {
+            throw new Error('Game duration is missing.');
+        }
+        guildId = interaction.guild.id
+        // Fetch user details from Discord API (to get usernames)
+        const winnerDetails = victors.map(userId => {
+            const user = interaction.guild.members.cache.get(userId);
+            return {
+                playerId: String(userId),
+                playerName: user ? user.user.username : 'Unknown',
+            };
+        });
+        const loserDetails = losers.map(userId => {
+            const user = interaction.guild.members.cache.get(userId);
+            return {
+                playerId: String(userId),
+                playerName: user ? user.user.username : 'Unknown',
+            };
+        });
+        const gameLog = new GameLog({
+            guildId,
+            gameName,
+            winners: winnerDetails,
+            losers: loserDetails,
+            gameDuration: gameTime,
+            timestamp: new Date(),
+        });
+        await gameLog.save();
+        console.log(`Game results saved for ${gameName} in ${guildId}`);
     } catch (error) {
         console.error('Error saving game results:', error);
     }
 }
-// function to update the scoreboard for the selected players
+
 async function updateScoreboard(victors, losers, guildId, gameName) {
     const allPlayers = [...victors, ...losers]; // Combine winners and losers into all players
 
