@@ -16,10 +16,14 @@ module.exports = {
         .addIntegerOption(option =>
             option.setName('maxplayers')
                 .setDescription('Maximum number of players')
+                .setMinValue(2)
+                .setMaxValue(10)
                 .setRequired(true))
         .addIntegerOption(option =>
             option.setName('minplayers')
                 .setDescription('Minimum number of players')
+                .setMinValue(1)
+                .setMaxValue(10)
                 .setRequired(false))
         .addStringOption(option =>
             option.setName('description')
@@ -34,6 +38,8 @@ module.exports = {
         const description = interaction.options.getString('description') || '';
         const guildId = interaction.guild.id;
 
+        if (!message.member.permissions.has('MANAGE_GUILD'))
+            return message.reply('You need "Manage Server" permission!');
         try {
             // Check if game already exists in the database
             let gameDetails = await GameDetails.findOne({ guildId, gameName });
