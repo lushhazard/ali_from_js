@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { sequelize, Tags } = require('./database');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { token } = require('./config.json');
 
@@ -14,6 +15,7 @@ const client = new Client({
 });
 
 client.commands = new Collection();
+
 
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
@@ -32,12 +34,10 @@ for (const folder of commandFolders) {
         }
     }
 }
-
+// readyyyy
 client.once(Events.ClientReady, readyClient => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
-
-client.login(token);
 
 // command event handler
 client.on(Events.InteractionCreate, async interaction => {
@@ -61,3 +61,5 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     }
 });
+
+client.login(token);
