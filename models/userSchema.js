@@ -10,13 +10,16 @@ const sequelize = new Sequelize('database', 'user', 'password', {
 });
 
 const Tags = sequelize.define('tags', {
-    name: {
+    userid: {
         type: Sequelize.STRING,
         unique: true,
     },
-    description: Sequelize.TEXT,
-    username: Sequelize.STRING,
-    usage_count: {
+    currency: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0,
+        allowNull: false,
+    },
+    bad_currency: {
         type: Sequelize.INTEGER,
         defaultValue: 0,
         allowNull: false,

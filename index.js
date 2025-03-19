@@ -1,8 +1,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { sequelize, Tags } = require('./database');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
-const { token } = require('./config.json');
+const config = require('./config.json');
+
+const mongoose = require('mongoose');
+
+mongoose.connect(config.mongoURI, {
+}).then(() => console.log('Connected to MongoDB'))
+    .catch(err => console.error('MongoDB connection error:', err));
 
 // new client instance
 const client = new Client({
@@ -62,4 +67,4 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
-client.login(token);
+client.login(config.token);

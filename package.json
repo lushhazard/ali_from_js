@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "discord.js": "^14.18.0",
-    "sequelize": "^6.37.6",
-    "sqlite3": "^5.1.7"
+    "mongoose": "^8.12.1"
   }
 }

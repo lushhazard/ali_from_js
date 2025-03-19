@@ -1,6 +1,7 @@
 # cairo_js
 # cairo_js
-run `npm install discord.js sequelize sqlite3` to install dependencies.
+needs mongodb, node, npm, etc.
+run `npm install discord.js mongoose` to install dependencies.
 expects a `config.json` in the top directory with the following contents:
 ```json
 {
