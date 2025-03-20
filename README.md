@@ -1,5 +1,4 @@
-# cairo_js
-# cairo_js
+# ali_from_js
 needs mongodb, node, npm, etc.
 
 run `npm install discord.js mongoose canvas` to install dependencies.
