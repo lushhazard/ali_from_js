@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const GameDetails = require('../../models/gameDetailsSchema');
 
 module.exports = {
@@ -23,8 +23,6 @@ module.exports = {
         const description = interaction.options.getString('description') || '';
         const guildId = interaction.guild.id;
 
-        if (!interaction.member.permissions.has('MANAGE_GUILD'))
-            return interaction.reply('You need "Manage Server" permission!');
         try {
             // Check if game already exists in the database
             let gameDetails = await GameDetails.findOne({ guildId, gameName });
