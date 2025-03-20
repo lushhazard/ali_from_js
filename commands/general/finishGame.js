@@ -183,7 +183,8 @@ async function updateScoreboard(victors, losers, interaction, gameName) {
 
     for (const playerId of allPlayers) {
 
-        playerName = interaction.guild.members.cache.get(playerId);
+        user = interaction.guild.members.cache.get(playerId);
+        playerName = user ? user.user.displayName : 'Unknown';
         // check if a scoreboard entry exists for this player in this game
         let playerStats = await GameModel.findOne({ playerId });
 

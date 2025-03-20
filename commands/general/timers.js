@@ -18,13 +18,10 @@ module.exports = {
 
         let response = '⏳ **Ongoing Games:**\n';
         ongoingGames.forEach(game => {
-            const startTime = game.gameTime;
-            const elapsedTime = Math.floor((Date.now() - startTime) / 1000); // Time in seconds
+            // make it fit discords expected precision
+            const startTime = Math.floor(game.gameTime / 1000);
 
-            const minutes = Math.floor(elapsedTime / 60);
-            const seconds = elapsedTime % 60;
-
-            response += `**${game.gameName}** - Started ${minutes}m ${seconds}s ago.\n`;
+            response += `**${game.gameName}** - Started <t:${startTime}:R>\n`;
         });
 
         await interaction.reply(response);
