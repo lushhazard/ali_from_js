@@ -10,6 +10,7 @@ module.exports = {
         .addStringOption(option =>
             option.setName('game')
                 .setDescription('The game that was played')
+                .setAutocomplete(true)
                 .setRequired(true)
         )
         .addIntegerOption(option =>
@@ -18,6 +19,17 @@ module.exports = {
                 .setRequired(false) // Time... is optional!
         ),
 
+    async autocomplete(interaction) {
+        // autocomplete game suggestions
+        const guildId = interaction.guild.id;
+        const games = await GameDetails.find({ guildId });
+        let choices = games.map(game => game.gameName);
+        const focusedOption = interaction.options.getFocused(true);
+        const filtered = choices.filter(choice => choice.startsWith(focusedOption.value));
+        await interaction.respond(
+            filtered.map(choice => ({ name: choice, value: choice })),
+        );
+    },
     async execute(interaction) {
         const guildId = interaction.guild.id;
         const gameName = interaction.options.getString('game').toLowerCase();

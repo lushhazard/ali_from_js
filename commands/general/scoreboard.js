@@ -22,21 +22,17 @@ module.exports = {
                     { name: 'Games Played', value: 'gamesPlayed' }
                 )
         ),
-
-
     async autocomplete(interaction) {
         // autocomplete game suggestions
         const guildId = interaction.guild.id;
         const games = await GameDetails.find({ guildId });
         let choices = games.map(game => game.gameName);
-        console.log(choices)
         const focusedOption = interaction.options.getFocused(true);
         const filtered = choices.filter(choice => choice.startsWith(focusedOption.value));
         await interaction.respond(
             filtered.map(choice => ({ name: choice, value: choice })),
         );
     },
-
     async execute(interaction) {
         const guildId = interaction.guild.id;
         const gameName = interaction.options.getString('game').toLowerCase();
