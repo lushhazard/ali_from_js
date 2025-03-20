@@ -12,8 +12,9 @@ module.exports = {
         .addStringOption(option =>
             option.setName('description')
                 .setDescription('Optional description for the game')
-                .setRequired(false)),
-
+                .setRequired(false)
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
     async execute(interaction) {
         const gameName = interaction.options.getString('game').toLowerCase();
         const maxPlayers = interaction.options.getInteger('maxplayers');
