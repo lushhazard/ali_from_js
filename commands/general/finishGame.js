@@ -61,8 +61,8 @@ async function handleGameFinish(interaction, gameName, gameTime) {
         .setMaxValues(10);
 
     const playersSelect = new UserSelectMenuBuilder()
-        .setCustomId('players')
-        .setPlaceholder('Select all players')
+        .setCustomId('losers')
+        .setPlaceholder('Select the losers')
         .setMinValues(1)
         .setMaxValues(10);
 
@@ -76,8 +76,11 @@ async function handleGameFinish(interaction, gameName, gameTime) {
     const row2 = new ActionRowBuilder().addComponents(playersSelect);
     const row3 = new ActionRowBuilder().addComponents(doneButton);
 
+    const collectorFilter = i => i.user.id === interaction.user.id;
+
     await interaction.reply({
-        content: 'Please select the victors and players for this game, then press **Done**.',
+        filter: collectorFilter,
+        content: 'Please select the victors and losers for this game, then press **Done**.',
         components: [row1, row2, row3],
     });
 
@@ -87,7 +90,7 @@ async function handleGameFinish(interaction, gameName, gameTime) {
     });
 
     let victors = [];
-    let players = [];
+    let losers = [];
 
     collector.on('collect', async (collectedInteraction) => {
         const { customId, values, user } = collectedInteraction;
@@ -100,23 +103,23 @@ async function handleGameFinish(interaction, gameName, gameTime) {
             });
         }
 
-        else if (customId === 'players') {
-            players = values;
+        else if (customId === 'losers') {
+            losers = values;
             await collectedInteraction.update({
-                content: `✔ **Players selected:** ${players.map(p => `<@${p}>`).join(', ')}`,
+                content: `✔ **Losers selected:** ${losers.map(p => `<@${p}>`).join(', ')}`,
                 components: [row1, row2, row3], // Keep victors & Done button
             });
         }
 
         else if (customId === 'done') {
-            if (!victors.length || !players.length) {
-                return collectedInteraction.reply({ content: '❌ Please select both victors and players before finishing!', ephemeral: true });
+            if (!victors.length || !losers.length) {
+                return collectedInteraction.reply({ content: '❌ Please select both victors and losers before finishing!', flags: MessageFlags.Ephemeral });
             }
 
-            const losers = players.filter(playerId => !victors.includes(playerId));
+            losers = losers.filter(playerId => !victors.includes(playerId));
 
             await registerGameResults(victors, losers, interaction, gameName, gameTime);
-            await updateScoreboard(victors, losers, interaction.guild.id, gameName);
+            await updateScoreboard(victors, losers, interaction, gameName);
 
             await collectedInteraction.update({
                 content: `🎉 **Game results saved!**\n🏆 **Winners:** ${victors.map(v => `<@${v}>`).join(', ')}\n🎮 **Losers:** ${losers.map(l => `<@${l}>`).join(', ')}`,
@@ -134,12 +137,13 @@ async function handleGameFinish(interaction, gameName, gameTime) {
     });
 }
 
-async function registerGameResults(victors, losers, interaction, gameName, gameTime, interaction) {
+async function registerGameResults(victors, losers, interaction, gameName, gameTime) {
     try {
         if (!gameTime) {
             throw new Error('Game duration is missing.');
         }
         guildId = interaction.guild.id
+        console.log(guildId);
         // Fetch user details from Discord API (to get usernames)
         const winnerDetails = victors.map(userId => {
             const user = interaction.guild.members.cache.get(userId);
@@ -170,25 +174,31 @@ async function registerGameResults(victors, losers, interaction, gameName, gameT
     }
 }
 
-async function updateScoreboard(victors, losers, guildId, gameName) {
+async function updateScoreboard(victors, losers, interaction, gameName) {
     const allPlayers = [...victors, ...losers]; // Combine winners and losers into all players
 
-    // Dynamically get the game model based on guildId and gameName
+    guildId = interaction.guild.id
+
     const GameModel = getGameModel(guildId, gameName);
 
     for (const playerId of allPlayers) {
-        // Check if a scoreboard entry exists for this player in this game
+
+        playerName = interaction.guild.members.cache.get(playerId);
+        // check if a scoreboard entry exists for this player in this game
         let playerStats = await GameModel.findOne({ playerId });
 
         if (!playerStats) {
-            // If no entry, create a new one
+            // if no entry, create a new one
             playerStats = new GameModel({
+                guildId,
                 playerId,
-                playerName: '', // Placeholder, can be updated later
+                playerName,
                 gamesWon: 0,
                 gamesPlayed: 0,
             });
         }
+
+        playerStats.playerName = playerName;
 
         // Increment games played
         playerStats.gamesPlayed++;

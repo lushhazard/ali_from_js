@@ -13,4 +13,6 @@ const getGameModel = (guildId, gameName) => {
     return connection.model(`${guildId}_${gameName}`, gameSchema);
 };
 
+gameSchema.index({ guildId: 1, playerId: 1 });
+
 module.exports = getGameModel;
