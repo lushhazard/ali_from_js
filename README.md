@@ -8,7 +8,8 @@ expects a `config.json` in the top directory with the following contents:
 {
   "token": "blablablablablablabla",
   "clientId": "123456789",
-  "guildId": "123456789"
+  "guildId": "123456789",
+  "mongoURI": "mongodb:address"
 }
 
 ```
