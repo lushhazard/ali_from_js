@@ -2,7 +2,6 @@
 needs mongodb, node, npm, etc.
 
 needs some special folders for storage too so just run
-
 `mkdir db scoreboards` (linux)
 
 run `npm install discord.js mongoose canvas` to install dependencies.
