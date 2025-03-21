@@ -1,7 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { createCanvas } = require('canvas');
+const { createCanvas, loadImage } = require('canvas');
 const getGameModel = require('../../models/scoreboardSchema');
 const GameDetails = require('../../models/gameDetailsSchema');
+const fs = require('fs');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -51,7 +52,7 @@ module.exports = {
         }
 
         // Generate the scoreboard image
-        const scoreboardImagePath = generateScoreboardImage(playerScores, gameName, guildId);
+        const scoreboardImagePath = await generateScoreboardImage(playerScores, gameName, guildId);
 
         // Send the generated image to Discord
         await interaction.editReply({
@@ -62,72 +63,85 @@ module.exports = {
 };
 
 // Function to generate the scoreboard image using canvas
-function generateScoreboardImage(playerScores, gameName, guildId) {
+async function generateScoreboardImage(playerScores, gameName, guildId) {
     const canvasWidth = 460;
-    const canvasHeight = (100 + (40 * playerScores.length));
+    const canvasHeight = (150 + (30 * playerScores.length));
     const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
+    const imagePath = './assets/parchment.jpg';
 
     // Draw background
     ctx.fillStyle = '#f0f0f0';
 
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    // draw image as background:
+    try {
+        const image = await loadImage(imagePath)
+        // Draw the image on the canvas at position (0, 0)
 
-    // Set fonts for title and text
-    ctx.font = '20px Noto Sans CJK JP';
-    ctx.fillStyle = '#333';
-    ctx.textAlign = 'center';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.drawImage(image, 0, 0, canvasWidth, canvasHeight);
 
-    // Title of the scoreboard
-    ctx.fillText(`Scoreboard for ${gameName}`, canvasWidth / 2, 50);
+        // Set fonts for title and text
+        ctx.font = 'bold 20px Noto Serif CJK JP Black';
+        ctx.fillStyle = '#333';
+        ctx.textAlign = 'center';
 
-    // Set smaller font for the players' data
-    ctx.font = '20px Noto Sans CJK JP';
+        // Title of the scoreboard
+        ctx.fillText(`Scoreboard for ${gameName}`, canvasWidth / 2, 50);
 
-    const lPad = 10
-    const columnCount = 3;
-    const columnWidth = ((canvasWidth - lPad) / columnCount);
-    const centering = columnWidth / 2;
-    const rightering = columnWidth - lPad;
+        // Set smaller font for the players' data
+        ctx.font = 'underline 20px Noto Serif CJK JP Black';
 
-    let columnPositions = []
-    for (let i = 0; i < columnCount; i++) {
-        columnPositions[i] = (columnWidth * i) + lPad;
-    }
+        const lPad = 16
+        const columnCount = 4;
+        const columnWidth = ((canvasWidth - lPad) / columnCount);
+        const centering = columnWidth / 2;
+        const rightering = columnWidth - lPad;
 
-    let vertical_offset = 110;
+        let columnPositions = []
+        for (let i = 0; i < columnCount; i++) {
+            columnPositions[i] = (columnWidth * i) + lPad;
+        }
 
-    // Draw headers for the columns
-    ctx.fillStyle = '#333';
-    ctx.textAlign = 'left';
-    ctx.fillText('Player Name', columnPositions[0], vertical_offset - 10);
-    ctx.textAlign = 'right';
-    ctx.fillText('Games Won', columnPositions[1] + rightering, vertical_offset - 10);
-    ctx.fillText('Games Played', columnPositions[2] + rightering, vertical_offset - 10);
+        let vertical_offset = 110;
 
-    // Draw player data in rows
-    playerScores.forEach((player, index) => {
-        const playerName = player.playerName;
-        const gamesWon = player.gamesWon;
-        const gamesPlayed = player.gamesPlayed;
-
-        yOffset = vertical_offset + 20 + index * 30;
-
+        // Draw headers for the columns
+        ctx.fillStyle = '#333';
         ctx.textAlign = 'left';
-        ctx.fillText(playerName, columnPositions[0], yOffset);
-
+        ctx.fillText('Player Name', columnPositions[0], vertical_offset - 10);
         ctx.textAlign = 'right';
-        ctx.fillText(gamesWon, columnPositions[1] + rightering, yOffset);
-        ctx.fillText(gamesPlayed, columnPositions[2] + rightering, yOffset);
-    });
+        ctx.fillText('Won', columnPositions[1] + rightering, vertical_offset - 10);
+        ctx.fillText('Played', columnPositions[2] + rightering, vertical_offset - 10);
+        ctx.fillText('Winrate', columnPositions[3] + rightering, vertical_offset - 10);
 
-    // Convert the canvas to an image buffer and save it
-    const outputPath = `./scoreboards/${guildId}-${gameName}.png`;
-    const buffer = canvas.toBuffer('image/png');
+        ctx.font = '20px Noto Serif CJK JP Black';
 
-    // Save the image to disk
-    const fs = require('fs');
-    fs.writeFileSync(outputPath, buffer);
+        // Draw player data in rows
+        playerScores.forEach((player, index) => {
+            const playerName = player.playerName;
+            const gamesWon = player.gamesWon;
+            const gamesPlayed = player.gamesPlayed;
+            const winPercent = ((gamesWon / gamesPlayed) * 100).toFixed(1);
 
-    return outputPath;
+            yOffset = vertical_offset + 20 + index * 30;
+
+            ctx.textAlign = 'left';
+            ctx.fillText(playerName, columnPositions[0], yOffset);
+
+            ctx.textAlign = 'right';
+            ctx.fillText(gamesWon, columnPositions[1] + rightering, yOffset);
+            ctx.fillText(gamesPlayed, columnPositions[2] + rightering, yOffset);
+            ctx.fillText(winPercent + "%", columnPositions[3] + rightering, yOffset);
+        });
+
+        const outputPath = `./scoreboards/${guildId}-${gameName}.png`;
+        const buffer = canvas.toBuffer('image/png');
+
+        fs.writeFileSync(outputPath, buffer);
+        return outputPath;
+
+    } catch (error) {
+        console.error("Error loading image or generating scoreboard:", error);
+        throw new Error("Failed to generate scoreboard image");
+    }
 }

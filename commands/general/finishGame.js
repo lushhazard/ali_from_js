@@ -1,12 +1,12 @@
-const { ActionRowBuilder, UserSelectMenuBuilder, SlashCommandBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ActionRowBuilder, UserSelectMenuBuilder, SlashCommandBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const GameLog = require('../../models/gameLogSchema');
 const GameDetails = require('../../models/gameDetailsSchema');
-const getGameModel = require('../../models/scoreboardSchema'); // The dynamically created game model
+const getGameModel = require('../../models/scoreboardSchema');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('finishgame')
-        .setDescription('Finish a game and register the victors and players')
+        .setDescription('Finish a game and register the winners and players')
         .addStringOption(option =>
             option.setName('game')
                 .setDescription('The game that was played')
@@ -50,7 +50,6 @@ module.exports = {
             gameTime = Math.floor((Date.now() - gameStartTime) / 60000);
         }
 
-        // optionally, ask the user for the game time
         if (!gameTime) {
             return await interaction.reply({
                 content: 'Please remember to provide the game duration my friend. (in minutes)',
@@ -66,15 +65,15 @@ module.exports = {
 };
 
 async function handleGameFinish(interaction, gameName, gameTime) {
-    const victorsSelect = new UserSelectMenuBuilder()
-        .setCustomId('victors')
-        .setPlaceholder('Select the victors')
+    const winnersSelect = new UserSelectMenuBuilder()
+        .setCustomId('winners')
+        .setPlaceholder('Select winners')
         .setMinValues(1)
         .setMaxValues(10);
 
     const playersSelect = new UserSelectMenuBuilder()
         .setCustomId('losers')
-        .setPlaceholder('Select the losers')
+        .setPlaceholder('Select losers')
         .setMinValues(1)
         .setMaxValues(10);
 
@@ -84,15 +83,12 @@ async function handleGameFinish(interaction, gameName, gameTime) {
         .setStyle(ButtonStyle.Success);
 
     // Create action rows for UI
-    const row1 = new ActionRowBuilder().addComponents(victorsSelect);
+    const row1 = new ActionRowBuilder().addComponents(winnersSelect);
     const row2 = new ActionRowBuilder().addComponents(playersSelect);
     const row3 = new ActionRowBuilder().addComponents(doneButton);
 
-    const collectorFilter = i => i.user.id === interaction.user.id;
-
     await interaction.reply({
-        filter: collectorFilter,
-        content: 'Please select the victors and losers for this game, then press **Done**.',
+        content: 'Please tell me who the winners and losers were for this game, then press **Done**.',
         components: [row1, row2, row3],
     });
 
@@ -101,17 +97,24 @@ async function handleGameFinish(interaction, gameName, gameTime) {
         time: 120000, // 2-minute timeout
     });
 
-    let victors = [];
+    let winners = [];
     let losers = [];
 
     collector.on('collect', async (collectedInteraction) => {
         const { customId, values, user } = collectedInteraction;
 
-        if (customId === 'victors') {
-            victors = values;
+        if (!(user.id === interaction.user.id)) {
+            return collectedInteraction.reply({
+                content: `-# Psst, my friend, don't meddle in other people's business. Go play a game or something.`,
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        if (customId === 'winners') {
+            winners = values;
             await collectedInteraction.update({
-                content: `✔ **Victors selected:** ${victors.map(v => `<@${v}>`).join(', ')}`,
-                components: [row1, row2, row3], // Keep players & Done button
+                content: `✔ **Winners selected:** ${winners.map(v => `<@${v}>`).join(', ')}`,
+                components: [row1, row2, row3],
             });
         }
 
@@ -119,22 +122,32 @@ async function handleGameFinish(interaction, gameName, gameTime) {
             losers = values;
             await collectedInteraction.update({
                 content: `✔ **Losers selected:** ${losers.map(p => `<@${p}>`).join(', ')}`,
-                components: [row1, row2, row3], // Keep victors & Done button
+                components: [row1, row2, row3],
             });
         }
 
         else if (customId === 'done') {
-            if (!victors.length || !losers.length) {
-                return collectedInteraction.reply({ content: '❌ Please select both victors and losers before finishing!', flags: MessageFlags.Ephemeral });
+            if (!winners.length || !losers.length) {
+                return collectedInteraction.reply({
+                    content: `
+My friend! Please tell me about the winners *and* losers before finishing!\n
+If you intended for there to be no winners or no losers, put Ali there. I will take care of it.
+`,
+                    flags: MessageFlags.Ephemeral
+                });
             }
+            // filter to make sure this bot is not in the winner or loser
+            // this allows for no winners and no losers (preferable to not checking imo)
+            let botId = interaction.client.user.id;
+            losers = losers.filter(playerId => !(playerId === botId));
+            winners = winners.filter(playerId => !(playerId === interaction.client.user.id));
+            losers = losers.filter(playerId => !winners.includes(playerId));
 
-            losers = losers.filter(playerId => !victors.includes(playerId));
-
-            await registerGameResults(victors, losers, interaction, gameName, gameTime);
-            await updateScoreboard(victors, losers, interaction, gameName);
-
+            await registerGameResults(winners, losers, interaction, gameName, gameTime);
+            await updateScoreboard(winners, losers, interaction, gameName);
+            let completionMessage = await generateCompletionMessage(winners, losers);
             await collectedInteraction.update({
-                content: `🎉 **Game results saved!**\n🏆 **Winners:** ${victors.map(v => `<@${v}>`).join(', ')}\n🎮 **Losers:** ${losers.map(l => `<@${l}>`).join(', ')}`,
+                content: completionMessage,
                 components: [],
             });
 
@@ -149,7 +162,7 @@ async function handleGameFinish(interaction, gameName, gameTime) {
     });
 }
 
-async function registerGameResults(victors, losers, interaction, gameName, gameTime) {
+async function registerGameResults(winners, losers, interaction, gameName, gameTime) {
     try {
         if (!gameTime) {
             throw new Error('Game duration is missing.');
@@ -157,7 +170,7 @@ async function registerGameResults(victors, losers, interaction, gameName, gameT
         guildId = interaction.guild.id
         console.log(guildId);
         // Fetch user details from Discord API (to get usernames)
-        const winnerDetails = victors.map(userId => {
+        const winnerDetails = winners.map(userId => {
             const user = interaction.guild.members.cache.get(userId);
             return {
                 playerId: String(userId),
@@ -186,8 +199,8 @@ async function registerGameResults(victors, losers, interaction, gameName, gameT
     }
 }
 
-async function updateScoreboard(victors, losers, interaction, gameName) {
-    const allPlayers = [...victors, ...losers]; // Combine winners and losers into all players
+async function updateScoreboard(winners, losers, interaction, gameName) {
+    const allPlayers = [...winners, ...losers]; // Combine winners and losers into all players
 
     guildId = interaction.guild.id
 
@@ -216,8 +229,8 @@ async function updateScoreboard(victors, losers, interaction, gameName) {
         // Increment games played
         playerStats.gamesPlayed++;
 
-        // If the player is a victor, increment their games won
-        if (victors.includes(playerId)) {
+        // If the player is a winner, increment their games won
+        if (winners.includes(playerId)) {
             playerStats.gamesWon++;
         }
 
@@ -226,4 +239,30 @@ async function updateScoreboard(victors, losers, interaction, gameName) {
     }
 
     console.log('Scoreboard updated!');
+}
+
+async function generateCompletionMessage(winners, losers) {
+    console.log(`
+generating completion message:\n
+win ${winners} length ${winners.length}
+\nlose ${losers} length ${losers.length}
+`)
+    let compMessage = `
+I've written down the results!\n
+🏆 **Winners:** ${winners.map(v => `<@${v}>`).join(', ')}\n
+<:WAJAJA:1193956228242620606> **Losers:** ${losers.map(l => `<@${l}>`).join(', ')}
+`;
+    if (winners.length == 0) {
+        let regex = /Winners:.*/i;
+        compMessage = compMessage.replace(regex, "Winner:** ... Nobody? What?");
+    } else if (winners.length == 1) {
+        compMessage = compMessage.replace("Winners", "Winner");
+    }
+    if (losers.length == 0) {
+        let regex = /Losers:.*/i;
+        compMessage = compMessage.replace(regex, "Losers:** ... Nobody.");
+    } else if (losers.length == 1) {
+        compMessage = compMessage.replace("Losers", "Loser");
+    }
+    return compMessage;
 }
