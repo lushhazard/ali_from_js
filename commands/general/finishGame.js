@@ -98,7 +98,7 @@ async function handleGameFinish(interaction, gameName, gameTime) {
 
     // Collector to handle user interactions
     const collector = interaction.channel.createMessageComponentCollector({
-        time: 60000, // 1-minute timeout
+        time: 120000, // 2-minute timeout
     });
 
     let victors = [];

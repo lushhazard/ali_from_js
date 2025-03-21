@@ -3,7 +3,7 @@ const { Schema, model } = require('mongoose');
 // Game Details Schema
 const gameDetailsSchema = new Schema({
     guildId: { type: String, required: true },
-    gameName: { type: String, required: true, unique: true },
+    gameName: { type: String, required: true },
     currentlyActive: { type: Boolean, default: false },
     gameTime: { type: Number, required: false },
     description: { type: String, default: '' },
