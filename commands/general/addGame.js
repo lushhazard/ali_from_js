@@ -11,49 +11,43 @@ module.exports = {
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('description')
-                .setDescription('Optional description for the game')
+                .setDescription('Description of the game')
                 .setRequired(false)
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
     async execute(interaction) {
         const gameName = interaction.options.getString('game').toLowerCase();
-        const maxPlayers = interaction.options.getInteger('maxplayers');
-        const minPlayers = interaction.options.getInteger('minplayers');
-        const winThreshold = interaction.options.getInteger('winthreshold');
         const description = interaction.options.getString('description') || '';
         const guildId = interaction.guild.id;
 
         try {
-            // Check if game already exists in the database
+            // check if game already exists in the database
             let gameDetails = await GameDetails.findOne({ guildId, gameName });
 
             if (gameDetails) {
-                return interaction.reply(`Im afraid \`${gameName}\` is already registered here my friend.`);
+                return interaction.reply(`Im afraid \`${gameName}\` is already registered in this bazaar my friend.`);
             }
 
-            // Create a new game entry with the provided details
+            // create new game entry with the provided details
             gameDetails = new GameDetails({
                 guildId,
                 gameName,
                 description,
             });
 
-            // Save the new game to the database
             await gameDetails.save();
 
-            // Reply with success message
-            interaction.reply(
-                `Game \`${gameName}\` has been added with max:\`${maxPlayers}\`, min: \`${minPlayers}\` players and win threshold \`${winThreshold}\`. When are we playing?!`);
+            interaction.reply(`I've dedicated a notebook for keeping track of ${gameName}, my friend. Now go play!`);
         } catch (error) {
             console.error(error);
 
-            // Handle the MongoDB duplicate error
+            // handle mongodb duplicate error
             if (error.code === 11000) {
-                return interaction.reply(`Im afraid that game is already registered here my friend.`);
+                return interaction.reply(`Im afraid that game is already registered in this bazaar my friend.`);
             }
 
-            // Handle any unexpected errors
-            interaction.reply('An... error occurred while trying to add the game. Ali apologizes for this inconvenience.');
+            // handle errors nicely
+            interaction.reply(`-# error:\nMy notebook caught on fire, i'll fetch a new one... Ali apologizes for this inconvenience.`);
         }
     }
 };

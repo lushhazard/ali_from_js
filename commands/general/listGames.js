@@ -14,13 +14,13 @@ module.exports = {
 
         // If there are no games tracked, reply with a message
         if (games.length === 0) {
-            return interaction.reply('No games are currently being tracked in this server.');
+            return interaction.reply(`My friend, this bazaar is barren. Add some games for me to track, will you?`);
         }
 
         // Format the list of games to show in a readable way
-        const gameList = games.map(game => `**${game.gameName}** - Description: ${game.description}`).join('\n');
+        const gameList = games.map(game => `- **${game.gameName}** - Description: ${game.description}`).join('\n');
 
         // Send the list of games as a reply
-        interaction.reply(`Games being tracked in this server:\n${gameList}`);
+        interaction.reply(`In this bazaar, Ali is tracking:\n${gameList}`);
     }
 };
