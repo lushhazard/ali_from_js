@@ -42,7 +42,7 @@ module.exports = {
         }
 
         const providedTime = interaction.options.getInteger('time');
-        let gameTime = providedTime;
+        let gameTime = providedTime
 
         if (!gameTime && gameDetails.currentlyActive) {
             const gameStartTime = gameDetails.gameTime;
@@ -50,7 +50,7 @@ module.exports = {
             gameTime = Math.floor((Date.now() - gameStartTime) / 60000);
         }
 
-        if (!gameTime) {
+        if (gameTime === null || gameTime === undefined) {
             return await interaction.reply({
                 content: 'Please remember to provide the game duration my friend. (in minutes)',
             });
