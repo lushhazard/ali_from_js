@@ -79,7 +79,7 @@ module.exports = {
             }
             // Save the collage as a PNG image
             const buffer = canvas.toBuffer('image/png');
-            const filePath = `./assets/${interaction.user.id}_rcommander.png`
+            const filePath = `./tmp/${interaction.user.id}_rcommander.png`
             fs.writeFileSync(filePath, buffer);
 
             // Send the image to Discord
