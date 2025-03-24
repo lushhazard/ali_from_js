@@ -41,6 +41,7 @@ module.exports = {
                         .setDescription('The new description of the game')
                         .setRequired(false))),
     async autocomplete(interaction) {
+
         // autocomplete game suggestions
         const guildId = interaction.guild.id;
         const games = await GameDetails.find({ guildId });
@@ -54,6 +55,7 @@ module.exports = {
     async execute(interaction) {
         const gameName = interaction.options.getString('game').toLowerCase();
         const guildId = interaction.guild.id;
+        const currentOption = interaction.options.getSubcommand();
 
         try {
             // check if game already exists in the database
@@ -62,13 +64,14 @@ module.exports = {
             if (!gameDetails) {
                 return interaction.reply(`Im afraid \`${gameName}\` isn't registered in this bazaar yet my friend. You have to create it first!`);
             }
-            if (interaction.commandName === 'addpin') {
+            if (currentOption === 'addpin') { ///////////////////////
                 gameDetails.savedInfo.push(interaction.options.getString('text'));
-                interaction.reply(`Your pin has been added to ${gameName}, my friend!`);
-            } else if (interaction.commandName === 'removepin') {
+                await interaction.reply(`Your pin has been added to ${gameName}, my friend!`);
+                await gameDetails.save();
+
+            } else if (currentOption === 'removepin') { /////////////
                 const pins = gameDetails.savedInfo;
-                const pinText = pins.map((pin, index) =>
-                    `${index + 1}. ${pin}`.join('\n'));
+                const pinText = pins.map((pin, index) => `${index + 1}. ${pin}`).join('\n');
 
                 await interaction.reply({
                     content: `\n${pinText}\nPlease send a message containing only the number of the option from the list that you want to remove:`
@@ -78,14 +81,10 @@ module.exports = {
                 //collects for 30s
                 const collector = interaction.channel.createMessageCollector({ filter: collectorFilter, time: 30_000 });
 
-                collector.on('collect', m => {
+                collector.on('collect', async (m) => {
                     console.log(`Collected ${m.content}`);
                     let sentNumber = Number(m.content);
-                    // removes sentnumber
-                    if (sentNumber !== NaN && pins[sentNumber - 1] !== undefined) {
-                        gameDetails.savedInfo.splice(sentNumber - 1, 1);
-                        collector.stop();
-                    } else if (sentNumber === NaN) {
+                    if (sentNumber === NaN) {
                         return m.reply({
                             content: "Your message contains other stuff than numbers. Try again my friend. Next time, numbers only.",
                         });
@@ -94,16 +93,28 @@ module.exports = {
                             content: "Your number... is not on the list my friend. Try again.",
                         });
                     }
+                    // removes sentnumber
+                    gameDetails.savedInfo.splice(sentNumber - 1, 1);
+                    console.log("finished collecting and stuff");
+                    await gameDetails.save();
+
+                    collector.stop();
                 });
                 collector.on('end', collected => {
                     console.log(`Collected ${collected.size} items`);
+                    interaction.followUp({
+                        content: `Successfully removed the pin.`,
+                    });
                 });
-            } else if (interaction.commandName === 'description') {
+                await gameDetails.save();
+
+            } else if (currentOption === 'description') { ///////////
                 gameDetails.description = interaction.options.getString('description');
                 interaction.reply(`${gameName} has been updated, my friend!`);
+                await gameDetails.save();
             }
-            await gameDetails.save();
 
+            console.log("finished editing game info")
         } catch (error) {
             console.error(error);
             interaction.reply(`-# error: \nMy notebook caught on fire, i'll fetch a new one... Ali apologizes for this inconvenience.`);
