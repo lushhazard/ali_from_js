@@ -7,6 +7,7 @@ const gameDetailsSchema = new Schema({
     currentlyActive: { type: Boolean, default: false },
     gameTime: { type: Number, required: false },
     description: { type: String, default: '' },
+    savedInfo: [{ type: String }],
     trackedAt: { type: Date, default: Date.now },
     gamesPlayed: { type: Number, default: 0 },
 });

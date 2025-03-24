@@ -109,7 +109,6 @@ async function handleGameFinish(interaction, gameName, gameTime) {
                 flags: MessageFlags.Ephemeral
             });
         }
-
         if (customId === 'winners') {
             winners = values;
             await collectedInteraction.update({
@@ -117,7 +116,6 @@ async function handleGameFinish(interaction, gameName, gameTime) {
                 components: [row1, row2, row3],
             });
         }
-
         else if (customId === 'losers') {
             losers = values;
             await collectedInteraction.update({
@@ -125,7 +123,6 @@ async function handleGameFinish(interaction, gameName, gameTime) {
                 components: [row1, row2, row3],
             });
         }
-
         else if (customId === 'done') {
             if (!winners.length || !losers.length) {
                 return collectedInteraction.reply({
@@ -150,7 +147,6 @@ If you intended for there to be no winners or no losers, put Ali there. I will t
                 content: completionMessage,
                 components: [],
             });
-
             collector.stop();
         }
     });
