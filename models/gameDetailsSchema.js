@@ -12,6 +12,7 @@ const gameDetailsSchema = new Schema({
     gamesPlayed: { type: Number, default: 0 },
 });
 
+gameDetailsSchema.index({ guildId: 1 });
 gameDetailsSchema.index({ guildId: 1, gameName: 1 }, { unique: true });
 
 const GameDetails = model('GameDetails', gameDetailsSchema);
