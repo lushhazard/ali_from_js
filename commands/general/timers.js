@@ -13,7 +13,7 @@ module.exports = {
         const ongoingGames = await GameDetails.find({ guildId, currentlyActive: true });
 
         if (ongoingGames.length === 0) {
-            return interaction.reply('No games are currently running in this server.');
+            return interaction.reply(`No game timers are currently running in this server.\n-# (Start one with /startgame !!)`);
         }
 
         let response = '⏳ **Ongoing Games:**\n';

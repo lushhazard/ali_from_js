@@ -7,10 +7,12 @@ const gameDetailsSchema = new Schema({
     currentlyActive: { type: Boolean, default: false },
     gameTime: { type: Number, required: false },
     description: { type: String, default: '' },
+    savedInfo: [{ type: String }],
     trackedAt: { type: Date, default: Date.now },
     gamesPlayed: { type: Number, default: 0 },
 });
 
+gameDetailsSchema.index({ guildId: 1 });
 gameDetailsSchema.index({ guildId: 1, gameName: 1 }, { unique: true });
 
 const GameDetails = model('GameDetails', gameDetailsSchema);

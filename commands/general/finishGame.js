@@ -13,7 +13,7 @@ module.exports = {
                 .setAutocomplete(true)
                 .setRequired(true)
         )
-        .addIntegerOption(option =>
+        .addNumberOption(option =>
             option.setName('time')
                 .setDescription('Duration of the game in minutes')
                 .setRequired(false) // Time... is optional!
@@ -40,14 +40,13 @@ module.exports = {
                 content: `The game \`${gameName}\` is not registered yet my friend. Please register it first.`,
             });
         }
-
-        const providedTime = interaction.options.getInteger('time');
-        let gameTime = providedTime
+        const providedTime = interaction.options.getNumber('time');
+        let gameTime = providedTime * 60;
 
         if (!gameTime && gameDetails.currentlyActive) {
             const gameStartTime = gameDetails.gameTime;
             // convert milliseconds to minutes
-            gameTime = Math.floor((Date.now() - gameStartTime) / 60000);
+            gameTime = Math.floor((Date.now() - gameStartTime) / 1000);
         }
 
         if (gameTime === null || gameTime === undefined) {
@@ -55,7 +54,6 @@ module.exports = {
                 content: 'Please remember to provide the game duration my friend. (in minutes)',
             });
         }
-
         // if time is already available, proceed with the game results
         await handleGameFinish(interaction, gameName, gameTime);
 
@@ -109,7 +107,6 @@ async function handleGameFinish(interaction, gameName, gameTime) {
                 flags: MessageFlags.Ephemeral
             });
         }
-
         if (customId === 'winners') {
             winners = values;
             await collectedInteraction.update({
@@ -117,7 +114,6 @@ async function handleGameFinish(interaction, gameName, gameTime) {
                 components: [row1, row2, row3],
             });
         }
-
         else if (customId === 'losers') {
             losers = values;
             await collectedInteraction.update({
@@ -125,7 +121,6 @@ async function handleGameFinish(interaction, gameName, gameTime) {
                 components: [row1, row2, row3],
             });
         }
-
         else if (customId === 'done') {
             if (!winners.length || !losers.length) {
                 return collectedInteraction.reply({
@@ -150,7 +145,6 @@ If you intended for there to be no winners or no losers, put Ali there. I will t
                 content: completionMessage,
                 components: [],
             });
-
             collector.stop();
         }
     });

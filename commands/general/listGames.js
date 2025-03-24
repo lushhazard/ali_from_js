@@ -17,8 +17,8 @@ module.exports = {
             return interaction.reply(`My friend, this bazaar is barren. Add some games for me to track, will you?`);
         }
 
-        // Format the list of games to show in a readable way
-        const gameList = games.map(game => `- **${game.gameName}** - Description: ${game.description}`).join('\n');
+        // monstrous formatting just to have them start with capital letters
+        const gameList = games.map(game => `- **${game.gameName.charAt(0).toUpperCase() + game.gameName.slice(1)}** - Description: ${game.description}`).join('\n');
 
         // Send the list of games as a reply
         interaction.reply(`In this bazaar, Ali is tracking:\n${gameList}`);
