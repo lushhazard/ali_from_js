@@ -13,7 +13,7 @@ module.exports = {
                 .setAutocomplete(true)
                 .setRequired(true)
         )
-        .addFloatOption(option =>
+        .addNumberOption(option =>
             option.setName('time')
                 .setDescription('Duration of the game in minutes')
                 .setRequired(false) // Time... is optional!
@@ -40,7 +40,7 @@ module.exports = {
                 content: `The game \`${gameName}\` is not registered yet my friend. Please register it first.`,
             });
         }
-        const providedTime = interaction.options.getFloat('time');
+        const providedTime = interaction.options.getNumber('time');
         let gameTime = providedTime * 60;
 
         if (!gameTime && gameDetails.currentlyActive) {
