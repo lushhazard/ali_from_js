@@ -47,7 +47,7 @@ module.exports = {
 
         if (playerScores.length === 0) {
             return interaction.editReply({
-                content: `No scoreboard data found for the game \`${gameName}\` in this server.`,
+                content: `Theres nothing recorded in my notes for \`${gameName}\` in this bazaar.`,
             });
         }
 
