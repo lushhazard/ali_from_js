@@ -211,7 +211,7 @@ async function updateScoreboard(winners, losers, interaction, gameName, gameTime
         playerName = user ? user.user.displayName : 'Unknown';
         // check if a scoreboard entry exists for this player in this game
         let playerStats = await GameModel.findOne({ playerId });
-        let userStats = await User.findOne({ playerId });
+        let userStats = await User.findOne({ userId: playerId });
 
         // if no entry, create a new one
         if (!playerStats) {
@@ -224,7 +224,7 @@ async function updateScoreboard(winners, losers, interaction, gameName, gameTime
             });
         }
         if (!userStats) {
-            playerStats = new GameModel({
+            playerStats = new User({
                 playerId,
                 userName: playerName,
             });
