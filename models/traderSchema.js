@@ -5,6 +5,7 @@ const traderSchema = new Schema({
     traderId: { type: String, required: true, unique: true },
     role: { type: Boolean, required: true },
     name: { type: String, required: true },
+    currency: { type: Number, default: 0 },
     // reputation value
     reputation: { type: Number, default: 0 },
     // Appraisal skills: Different skills for different item types (swords, artifacts, pottery, etc.)

@@ -2,6 +2,8 @@ const { ActionRowBuilder, UserSelectMenuBuilder, SlashCommandBuilder, ButtonBuil
 const GameLog = require('../../models/gameLogSchema');
 const GameDetails = require('../../models/gameDetailsSchema');
 const getGameModel = require('../../models/scoreboardSchema');
+const User = require('../../models/userSchema');
+
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -41,28 +43,28 @@ module.exports = {
             });
         }
         const providedTime = interaction.options.getNumber('time');
-        let gameTime = providedTime * 60;
+        let gameTimeSeconds = providedTime * 60;
 
-        if (!gameTime && gameDetails.currentlyActive) {
+        if (!gameTimeSeconds && gameDetails.currentlyActive) {
             const gameStartTime = gameDetails.gameTime;
-            // convert milliseconds to minutes
-            gameTime = Math.floor((Date.now() - gameStartTime) / 1000);
+            // convert milliseconds to seconds
+            gameTimeSeconds = Math.floor((Date.now() - gameStartTime) / 1000);
         }
 
-        if (gameTime === null || gameTime === undefined) {
+        if (gameTimeSeconds === null || gameTimeSeconds === undefined) {
             return await interaction.reply({
                 content: 'Please remember to provide the game duration my friend. (in minutes)',
             });
         }
         // if time is already available, proceed with the game results
-        await handleGameFinish(interaction, gameName, gameTime);
+        await handleGameFinish(interaction, gameName, gameTimeSeconds);
 
         gameDetails.currentlyActive = false;
         await gameDetails.save();
     },
 };
 
-async function handleGameFinish(interaction, gameName, gameTime) {
+async function handleGameFinish(interaction, gameName, gameTimeSeconds) {
     const winnersSelect = new UserSelectMenuBuilder()
         .setCustomId('winners')
         .setPlaceholder('Select winners')
@@ -138,8 +140,8 @@ If you intended for there to be no winners or no losers, put Ali there. I will t
             winners = winners.filter(playerId => !(playerId === interaction.client.user.id));
             losers = losers.filter(playerId => !winners.includes(playerId));
 
-            await registerGameResults(winners, losers, interaction, gameName, gameTime);
-            await updateScoreboard(winners, losers, interaction, gameName);
+            await registerGameResults(winners, losers, interaction, gameName, gameTimeSeconds);
+            await updateScoreboard(winners, losers, interaction, gameName, gameTimeSeconds);
             let completionMessage = await generateCompletionMessage(winners, losers);
             await collectedInteraction.update({
                 content: completionMessage,
@@ -156,9 +158,9 @@ If you intended for there to be no winners or no losers, put Ali there. I will t
     });
 }
 
-async function registerGameResults(winners, losers, interaction, gameName, gameTime) {
+async function registerGameResults(winners, losers, interaction, gameName, gameTimeSeconds) {
     try {
-        if (!gameTime) {
+        if (!gameTimeSeconds) {
             throw new Error('Game duration is missing.');
         }
         guildId = interaction.guild.id
@@ -183,7 +185,7 @@ async function registerGameResults(winners, losers, interaction, gameName, gameT
             gameName,
             winners: winnerDetails,
             losers: loserDetails,
-            gameDuration: gameTime,
+            gameDuration: gameTimeSeconds,
             timestamp: new Date(),
         });
         await gameLog.save();
@@ -193,7 +195,8 @@ async function registerGameResults(winners, losers, interaction, gameName, gameT
     }
 }
 
-async function updateScoreboard(winners, losers, interaction, gameName) {
+// update scoreboard and user stats
+async function updateScoreboard(winners, losers, interaction, gameName, gameTimeSeconds) {
     const allPlayers = [...winners, ...losers]; // Combine winners and losers into all players
 
     guildId = interaction.guild.id
@@ -202,13 +205,16 @@ async function updateScoreboard(winners, losers, interaction, gameName) {
 
     for (const playerId of allPlayers) {
 
+
+
         user = interaction.guild.members.cache.get(playerId);
         playerName = user ? user.user.displayName : 'Unknown';
         // check if a scoreboard entry exists for this player in this game
         let playerStats = await GameModel.findOne({ playerId });
+        let userStats = await User.findOne({ playerId });
 
+        // if no entry, create a new one
         if (!playerStats) {
-            // if no entry, create a new one
             playerStats = new GameModel({
                 guildId,
                 playerId,
@@ -217,19 +223,39 @@ async function updateScoreboard(winners, losers, interaction, gameName) {
                 gamesPlayed: 0,
             });
         }
+        if (!userStats) {
+            playerStats = new GameModel({
+                playerId,
+                userName: playerName,
+            });
+        }
 
         playerStats.playerName = playerName;
+        userStats.userName = playerName;
 
         // Increment games played
         playerStats.gamesPlayed++;
+        userStats.gamesPlayed++;
 
         // If the player is a winner, increment their games won
         if (winners.includes(playerId)) {
             playerStats.gamesWon++;
+            userStats.gamesWon++;
+            userStats.currentWinStreak++;
+        } else {
+            userStats.currentWinStreak = 0;
         }
+
+        // new longest game played?
+        if (userStats.longestGameDuration < gameTimeSeconds) {
+            userStats.longestGameDuration = gameTimeSeconds;
+            userStats.longestGameName = gameName;
+        }
+
 
         // Save the updated player stats
         await playerStats.save();
+        await userStats.save();
     }
 
     console.log('Scoreboard updated!');
