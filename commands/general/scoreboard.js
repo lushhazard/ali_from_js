@@ -87,7 +87,7 @@ async function generateScoreboardImage(playerScores, gameName, guildId) {
         ctx.textAlign = 'center';
 
         // Title of the scoreboard
-        ctx.fillText(`Scoreboard for ${gameName}`, canvasWidth / 2, 50);
+        ctx.fillText(`Scoreboard for ${gameName.charAt(0).toUpperCase() + gameName.slice(1)}`, canvasWidth / 2, 50);
 
         // Set smaller font for the players' data
         ctx.font = 'underline 20px Noto Serif CJK JP Black';

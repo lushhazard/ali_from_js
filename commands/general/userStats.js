@@ -26,7 +26,7 @@ module.exports = {
 
         let winPercent = ((userStats.gamesWon / userStats.gamesPlayed) * 100).toFixed(1);
 
-        await interaction.reply(`### ${userStats.userName}
+        await interaction.reply(`*${userStats.userName}*? Let me see...
 Total # of games played: ${userStats.gamesPlayed}
 Total # of games won: ${userStats.gamesWon} (${winPercent}%)
 Current win-streak: ${userStats.currentWinStreak}
