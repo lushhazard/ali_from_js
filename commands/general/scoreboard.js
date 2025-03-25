@@ -56,7 +56,7 @@ module.exports = {
 
         // Send the generated image to Discord
         await interaction.editReply({
-            content: `Here's the scoreboard for ${gameName} sorted by ${sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}:`,
+            content: `Here's the scoreboard for ${gameName.charAt(0).toUpperCase() + gameName.slice(1)} sorted by ${sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}:`,
             files: [scoreboardImagePath],
         });
     },
