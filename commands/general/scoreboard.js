@@ -134,8 +134,8 @@ async function generateScoreboardImage(playerScores, gameName, guildId) {
             ctx.fillText(winPercent + "%", columnPositions[3] + rightering, yOffset);
         });
 
-        const buffer = canvas.toBuffer('image/jpg');
-        const outputPath = `./tmp/${guildId}-${gameName}.jpg`;
+        const buffer = canvas.toBuffer('image/png');
+        const outputPath = `./tmp/${guildId}-${gameName}.png`;
 
         fs.writeFileSync(outputPath, buffer);
         return outputPath;

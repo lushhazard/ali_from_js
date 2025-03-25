@@ -11,6 +11,4 @@ const userSchema = new Schema({
     currentWinStreak: { type: Number, default: 0 },
 });
 
-userSchema.index({ userId: 1 });
-
 module.exports = model('User', userSchema);

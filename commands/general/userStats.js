@@ -11,14 +11,14 @@ module.exports = {
                 .setRequired(false)
         ),
     async execute(interaction) {
-        const guildId = interaction.guild.id;
         const user = interaction.options.getUser('user') || interaction.user;
         const userId = user.id;
-        const gameName = interaction.options.getString('game').toLowerCase();
-        const sortBy = interaction.options.getString('sortby') || 'gamesWon';
 
         let userStats = await User.findOne({ userId });
 
+        if (!userStats) {
+            return interaction.reply(`Strange.. I'm afraid I don't have any records of your exploits, my friend. Ali is sure to keep tabs on everyone...`);
+        }
         let seconds = userStats.longestGameDuration;
         let hours = Math.floor(seconds / 3600);
         let minutes = Math.floor((seconds % 3600) / 60);
