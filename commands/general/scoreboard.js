@@ -65,7 +65,7 @@ module.exports = {
 // Function to generate the scoreboard image using canvas
 async function generateScoreboardImage(playerScores, gameName, guildId) {
     const canvasWidth = 460;
-    const canvasHeight = (150 + (30 * playerScores.length));
+    const canvasHeight = (140 + (30 * playerScores.length));
     const canvas = createCanvas(canvasWidth, canvasHeight);
     const ctx = canvas.getContext('2d');
     const imagePath = './assets/parchment.jpg';
@@ -83,7 +83,7 @@ async function generateScoreboardImage(playerScores, gameName, guildId) {
 
         // Set fonts for title and text
         ctx.font = 'bold 20px Noto Serif CJK JP Black';
-        ctx.fillStyle = '#333';
+        ctx.fillStyle = '#111';
         ctx.textAlign = 'center';
 
         // Title of the scoreboard
@@ -106,7 +106,7 @@ async function generateScoreboardImage(playerScores, gameName, guildId) {
         let vertical_offset = 110;
 
         // Draw headers for the columns
-        ctx.fillStyle = '#333';
+        ctx.fillStyle = '#111';
         ctx.textAlign = 'left';
         ctx.fillText('Player Name', columnPositions[0], vertical_offset - 10);
         ctx.textAlign = 'right';
@@ -114,7 +114,8 @@ async function generateScoreboardImage(playerScores, gameName, guildId) {
         ctx.fillText('Played', columnPositions[2] + rightering, vertical_offset - 10);
         ctx.fillText('Winrate', columnPositions[3] + rightering, vertical_offset - 10);
 
-        ctx.font = '20px Noto Serif CJK JP Black';
+        ctx.font = '20px Noto Serif CJK JP SemiBold';
+
 
         // Draw player data in rows
         playerScores.forEach((player, index) => {
