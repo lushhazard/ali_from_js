@@ -205,10 +205,10 @@ async function updateScoreboard(winners, losers, interaction, gameName, gameTime
 
     for (const playerId of allPlayers) {
 
-
-
+        // 
         user = interaction.guild.members.cache.get(playerId);
         playerName = user ? user.user.displayName : 'Unknown';
+
         // check if a scoreboard entry exists for this player in this game
         let playerStats = await GameModel.findOne({ playerId });
         let userStats = await User.findOne({ userId: playerId });
@@ -224,7 +224,7 @@ async function updateScoreboard(winners, losers, interaction, gameName, gameTime
             });
         }
         if (!userStats) {
-            playerStats = new User({
+            userStats = new User({
                 playerId,
                 userName: playerName,
             });
