@@ -225,7 +225,7 @@ async function updateScoreboard(winners, losers, interaction, gameName, gameTime
         }
         if (!userStats) {
             userStats = new User({
-                playerId,
+                userId: playerId,
                 userName: playerName,
             });
         }
