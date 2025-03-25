@@ -160,7 +160,7 @@ If you intended for there to be no winners or no losers, put Ali there. I will t
 
 async function registerGameResults(winners, losers, interaction, gameName, gameTimeSeconds) {
     try {
-        if (!gameTimeSeconds) {
+        if (gameTimeSeconds === null || gameTimeSeconds === undefined) {
             throw new Error('Game duration is missing.');
         }
         guildId = interaction.guild.id
