@@ -51,7 +51,7 @@ module.exports = {
             gameTimeSeconds = Math.floor((Date.now() - gameStartTime) / 1000);
         }
 
-        if (gameTimeSeconds === null || gameTimeSeconds === undefined) {
+        if (gameTimeSeconds == null) {
             return await interaction.reply({
                 content: 'Please remember to provide the game duration my friend. (in minutes)',
             });
@@ -160,7 +160,7 @@ If you intended for there to be no winners or no losers, put Ali there. I will t
 
 async function registerGameResults(winners, losers, interaction, gameName, gameTimeSeconds) {
     try {
-        if (gameTimeSeconds === null || gameTimeSeconds === undefined) {
+        if (gameTimeSeconds == null) {
             throw new Error('Game duration is missing.');
         }
         guildId = interaction.guild.id
