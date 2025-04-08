@@ -21,7 +21,6 @@ const client = new Client({
 
 client.commands = new Collection();
 
-
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
 
@@ -43,7 +42,6 @@ for (const folder of commandFolders) {
 client.once(Events.ClientReady, readyClient => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
-
 // command event handler
 client.on(Events.InteractionCreate, async interaction => {
     if (interaction.isChatInputCommand()) {
@@ -85,5 +83,4 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     }
 });
-
 client.login(config.token);
