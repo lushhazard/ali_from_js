@@ -18,7 +18,7 @@ module.exports = {
         }
 
         // monstrous formatting just to have them start with capital letters
-        const gameList = games.map(game => `- **${game.gameName.charAt(0).toUpperCase() + game.gameName.slice(1)}** - Description: ${game.description}`).join('\n');
+        const gameList = games.map(game => `- **${game.gameName.charAt(0).toUpperCase() + game.gameName.slice(1)}** - ${game.description}`).join('\n');
 
         // Send the list of games as a reply
         interaction.reply(`In this bazaar, Ali is tracking:\n${gameList}`);
