@@ -66,7 +66,20 @@ module.exports = {
                 // additional logic for partner and background images
                 if (data.keywords.some(keyword => keyword.toLowerCase().includes('partner with'))) {
                     const partnerQuery = encodeURIComponent(data.oracle_text.match(/Partner with (.*?)(?=\s|$)/)[1]);
+		    console.log(`partner with: ${partnerQuery}`)
                     const partnerResponse = await axios.get(`https://api.scryfall.com/cards/search?q=${partnerQuery}`);
+                    const partnerImgUrl = partnerResponse.data.data[0].image_uris.normal;
+                    const partnerImage = await loadImage(partnerImgUrl);
+                    ctx.drawImage(partnerImage, cardw * x + smallwOffset, smallhOffset, smallw, smallh);
+                }
+		else if (data.keywords.some(keyword => keyword.toLowerCase().includes('partner'))) {
+		    let partnerResponse
+                    while (true) {
+		        partnerResponse = await axios.get('https://api.scryfall.com/cards/random?q=o%3Apartner');
+		        if (!(partnerResponse.data.keywords.some(keyword => keyword.toLowerCase().includes('partner with')))) {
+			    break
+			}
+		    }
                     const partnerImgUrl = partnerResponse.data.data[0].image_uris.normal;
                     const partnerImage = await loadImage(partnerImgUrl);
                     ctx.drawImage(partnerImage, cardw * x + smallwOffset, smallhOffset, smallw, smallh);
@@ -84,9 +97,9 @@ module.exports = {
                     ctx.drawImage(ffImage, cardw * x + smallwOffset, smallhOffset, smallw, smallh);
                 }
             }
-            // Save the collage as a jpg image
-            const buffer = canvas.toBuffer('image/jpg');
-            const filePath = `./tmp/${interaction.user.id}_rcommander.jpg`
+            const buffer = canvas.toBuffer('image/jpeg');
+            const filePath = `./tmp/${interaction.user.id}_rcommander.jpeg`
+	    fs.mkdirSync('./tmp',{recursive:true});
             fs.writeFileSync(filePath, buffer);
 
             // Send the image to Discord
