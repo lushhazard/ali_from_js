@@ -30,7 +30,7 @@ module.exports = {
         try {
             // Validate amount
             if (amount === 0) {
-                return interaction.reply("Zero commanders, coming right up... *sigh*");
+                return interaction.reply("Zero commanders, coming right up... ");
             }
             await interaction.deferReply();
 
