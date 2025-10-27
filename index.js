@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
 const config = require('./config.json');
-
+const { initWatchers } = require('./commands/utility/startWatcher.js');
 const mongoose = require('mongoose');
 
 mongoose.connect(config.mongoURI, {
@@ -39,8 +39,14 @@ for (const folder of commandFolders) {
     }
 }
 // readyyyy
-client.once(Events.ClientReady, readyClient => {
+client.once(Events.ClientReady, async readyClient => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+    try {
+        await initWatchers(client);
+        console.log('Website watchers initialized successfully.');
+    } catch (err) {
+        console.error('Failed to initialize website watchers:', err);
+    }
 });
 // command event handler
 client.on(Events.InteractionCreate, async interaction => {

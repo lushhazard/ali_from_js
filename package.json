@@ -19,8 +19,9 @@
   },
   "dependencies": {
     "axios": "^1.8.4",
-    "canvas": "^3.1.2",
-    "discord.js": "^14.21.0",
-    "mongoose": "^8.16.5"
+    "canvas": "^3.2.0",
+    "diff": "^8.0.2",
+    "discord.js": "^14.24.0",
+    "mongoose": "^8.19.2"
   }
 }
