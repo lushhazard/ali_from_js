@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const axios = require('axios');
 const { diffLines } = require('diff');
-const WebsiteWatch = require('../../models/watcherSchema.js');
+const Watcher = require('../../models/watcherSchema.js');
 
 const activeWatches = new Map(); // memory cache: url+userId → interval handle
 
@@ -17,7 +17,7 @@ module.exports = {
                 .setDescription('The website URL to watch')
                 .setRequired(true)
         )
-        .addIntegerOption(option =>
+        .addNumberOption(option =>
             option
                 .setName('interval')
                 .setDescription('How often to check (in hours, default every 24 hours)')
@@ -26,26 +26,33 @@ module.exports = {
 
     async execute(interaction) {
         const url = interaction.options.getString('url');
-        const intervalHours = interaction.options.getInteger('interval') || WATCH_INTERVAL_DEFAULT;
+        const intervalHours = interaction.options.getNumber('interval') || WATCH_INTERVAL_DEFAULT;
         const userId = interaction.user.id;
         const guildId = interaction.guild?.id;
 
         await interaction.deferReply({ ephemeral: true });
 
         try {
-            const response = await axios.get(url, { timeout: 10000 });
-            const content = response.data;
+            const response = await axios.get(url, {
+                timeout: 10000,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (compatible; alifromjs/1.0)',
+                    'Accept': 'text/html,application/xhtml+xml',
+                },
+                decompress: true
+            });
+            const content = sanitizeHTML(response.data);
             const hash = simpleHash(content);
 
             // Check if already watching
-            const existing = await WebsiteWatch.findOne({ userId, url });
+            const existing = await Watcher.findOne({ userId, url });
             if (existing) {
                 await interaction.editReply(`Im already keeping an eye on that link (every ${existing.intervalHours} hours).`);
                 return;
             }
 
             // Save to DB
-            const doc = await WebsiteWatch.create({
+            const doc = await Watcher.create({
                 userId,
                 guildId,
                 url,
@@ -80,7 +87,7 @@ function startWatcher(client, doc, initialContent) {
             const newContent = res.data;
             const newHash = simpleHash(newContent);
 
-            const dbDoc = await WebsiteWatch.findOne({ userId: doc.userId, url: doc.url });
+            const dbDoc = await Watcher.findOne({ userId: doc.userId, url: doc.url });
             if (!dbDoc) {
                 clearInterval(handle);
                 activeWatches.delete(key);
@@ -93,7 +100,8 @@ function startWatcher(client, doc, initialContent) {
                 let diffOutput = '';
 
                 for (const part of changes) {
-                    const prefix = part.added ? '+' : part.removed ? '-' : ' ';
+                    if (!part.added && !part.removed) continue; // skip unchanged
+                    const prefix = part.added ? '+' : '-';
                     const lines = part.value.split('\n').filter(l => l.trim() !== '');
                     for (const line of lines) {
                         diffOutput += `${prefix}${line}\n`;
@@ -135,11 +143,22 @@ function simpleHash(str) {
     return hash.toString();
 }
 
+function sanitizeHTML(html) {
+    return html
+        .replace(/<script[\s\S]*?<\/script>/gi, '')   // remove all scripts
+        .replace(/<style[\s\S]*?<\/style>/gi, '')     // remove styles
+        .replace(/<!--[\s\S]*?-->/g, '')              // remove comments
+        .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/g, '') // remove ISO timestamps
+        .replace(/\b\d{10,13}\b/g, '')                // remove Unix timestamps
+        .replace(/\s+/g, ' ')                         // collapse whitespace
+        .trim();
+}
+
 // -----------------------
 // Rebuild watchers on startup
 // -----------------------
 module.exports.initWatchers = async (client) => {
-    const docs = await WebsiteWatch.find({});
+    const docs = await Watcher.find({});
     console.log(`Restoring ${docs.length} website watchers...`);
 
     for (const doc of docs) {

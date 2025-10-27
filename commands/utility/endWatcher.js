@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const WebsiteWatch = require('../../models/watcherSchema.js');
+const Watcher = require('../../models/watcherSchema.js');
 
 const activeWatches = require('./startWatcher.js').activeWatches; // optional if exported
 
@@ -18,7 +18,7 @@ module.exports = {
 
         await interaction.deferReply({ ephemeral: true });
 
-        const result = await WebsiteWatch.findOneAndDelete({ userId, url });
+        const result = await Watcher.findOneAndDelete({ userId, url });
         if (result) {
             const key = `${userId}:${url}`;
             if (activeWatches.has(key)) {
