@@ -17,7 +17,7 @@ module.exports = {
                 .setDescription('The website URL to watch')
                 .setRequired(true)
         )
-        .addNumberOption(option =>
+        .addIntegerOption(option =>
             option
                 .setName('interval')
                 .setDescription('How often to check (in hours, default every 24 hours)')
@@ -26,7 +26,7 @@ module.exports = {
 
     async execute(interaction) {
         const url = interaction.options.getString('url');
-        const intervalHours = interaction.options.getNumber('interval') || WATCH_INTERVAL_DEFAULT;
+        const intervalHours = interaction.options.getInteger('interval') || WATCH_INTERVAL_DEFAULT;
         const userId = interaction.user.id;
         const guildId = interaction.guild?.id;
 
