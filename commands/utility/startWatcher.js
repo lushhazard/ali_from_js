@@ -3,7 +3,7 @@ const axios = require('axios');
 const { diffLines } = require('diff');
 const Watcher = require('../../models/watcherSchema.js');
 
-const activeWatches = new Map(); // memory cache: url+userId → interval handle
+const activeWatchers = new Map(); // memory cache: url+userId → interval handle
 
 const WATCH_INTERVAL_DEFAULT = 24; // hours
 
@@ -33,16 +33,7 @@ module.exports = {
         await interaction.deferReply({ ephemeral: true });
 
         try {
-            const response = await axios.get(url, {
-                timeout: 10000,
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (compatible; alifromjs/1.0)',
-                    'Accept': 'text/html,application/xhtml+xml',
-                },
-                decompress: true
-            });
-            const content = sanitizeHTML(response.data);
-            const hash = simpleHash(content);
+            const { content, hash } = await getWebsite(url);
 
             // Check if already watching
             const existing = await Watcher.findOne({ userId, url });
@@ -74,23 +65,35 @@ module.exports = {
 // Watcher helper functions
 // -----------------------
 
+async function getWebsite(targetUrl) {
+    const response = await axios.get(targetUrl, {
+        timeout: 10000,
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; alifromjs/1.0)',
+            'Accept': 'text/html,application/xhtml+xml',
+        },
+        decompress: true
+    });
+    const content = sanitizeHTML(response.data);
+    const hash = simpleHash(content);
+    return { content, hash };
+}
+
 function startWatcher(client, doc, initialContent) {
     const key = `${doc.userId}:${doc.url}`;
-    if (activeWatches.has(key)) return;
+    if (activeWatchers.has(key)) return;
 
     let lastContent = initialContent;
     const intervalMs = doc.intervalHours * 60 * 60 * 1000;
 
     const handle = setInterval(async () => {
         try {
-            const res = await axios.get(doc.url, { timeout: 10000 });
-            const newContent = res.data;
-            const newHash = simpleHash(newContent);
+            const { content: newContent, hash: newHash } = await getWebsite(doc.url);
 
             const dbDoc = await Watcher.findOne({ userId: doc.userId, url: doc.url });
             if (!dbDoc) {
                 clearInterval(handle);
-                activeWatches.delete(key);
+                activeWatchers.delete(key);
                 return;
             }
 
@@ -121,7 +124,7 @@ function startWatcher(client, doc, initialContent) {
 
                 const user = await client.users.fetch(dbDoc.userId);
                 await user.send(
-                    `Psst, Ali sees **${dbDoc.url}** has changed!\nHere's whats changed:\n\n` +
+                    `Psst, Ali sees **${dbDoc.url}** has changed!\nHere's the tea:\n` +
                     '```diff\n' + diffOutput + '```'
                 );
             }
@@ -130,7 +133,7 @@ function startWatcher(client, doc, initialContent) {
         }
     }, intervalMs);
 
-    activeWatches.set(key, handle);
+    activeWatchers.set(key, handle);
 }
 
 function simpleHash(str) {
@@ -145,12 +148,13 @@ function simpleHash(str) {
 
 function sanitizeHTML(html) {
     return html
-        .replace(/<script[\s\S]*?<\/script>/gi, '')   // remove all scripts
-        .replace(/<style[\s\S]*?<\/style>/gi, '')     // remove styles
-        .replace(/<!--[\s\S]*?-->/g, '')              // remove comments
-        .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/g, '') // remove ISO timestamps
-        .replace(/\b\d{10,13}\b/g, '')                // remove Unix timestamps
-        .replace(/\s+/g, ' ')                         // collapse whitespace
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/<[^>]+>/g, '')                  // remove all other tags
+        .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/g, '')
+        .replace(/\b\d{10,13}\b/g, '')
+        .replace(/\s+/g, ' ')
         .trim();
 }
 
@@ -163,10 +167,12 @@ module.exports.initWatchers = async (client) => {
 
     for (const doc of docs) {
         try {
-            const res = await axios.get(doc.url, { timeout: 10000 });
-            startWatcher(client, doc, res.data);
+            const { content } = await getWebsite(doc.url);
+            startWatcher(client, doc, content);
         } catch (err) {
             console.error(`Failed to restore watcher for ${doc.url}:`, err.message);
         }
     }
 };
+
+module.exports.activeWatchers = activeWatchers;

@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const Watcher = require('../../models/watcherSchema.js');
 
-const activeWatches = require('./startWatcher.js').activeWatches; // optional if exported
+const activeWatchers = require('./startWatcher.js').activeWatchers;
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -21,9 +21,9 @@ module.exports = {
         const result = await Watcher.findOneAndDelete({ userId, url });
         if (result) {
             const key = `${userId}:${url}`;
-            if (activeWatches.has(key)) {
-                clearInterval(activeWatches.get(key));
-                activeWatches.delete(key);
+            if (activeWatchers.has(key)) {
+                clearInterval(activeWatchers.get(key));
+                activeWatchers.delete(key);
             }
             await interaction.editReply(`Ali will no longer keep track of **${url}**.`);
         } else {
