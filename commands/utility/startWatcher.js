@@ -98,12 +98,11 @@ function startWatcher(client, doc, initialContent) {
             }
 
             if (newHash !== dbDoc.contentHash) {
-                // Compute diff
                 const changes = diffLines(lastContent, newContent);
                 let diffOutput = '';
 
                 for (const part of changes) {
-                    if (!part.added && !part.removed) continue; // skip unchanged
+                    if (!part.added && !part.removed) continue;
                     const prefix = part.added ? '+' : '-';
                     const lines = part.value.split('\n').filter(l => l.trim() !== '');
                     for (const line of lines) {
@@ -111,22 +110,37 @@ function startWatcher(client, doc, initialContent) {
                     }
                 }
 
-                // Limit output size (Discord max ~2000 chars per message)
-                if (diffOutput.length > 1800) {
-                    diffOutput = diffOutput.slice(0, 1800) + '\n... (truncated)';
+                const tmpDir = path.join(__dirname, '../../tmp');
+                if (!fs.existsSync(tmpDir)) {
+                    fs.mkdirSync(tmpDir, { recursive: true });
                 }
 
-                // Update stored hash/content
+                const safeUrl = doc.url
+                    .replace(/^https?:\/\//i, '')
+                    .replace(/[^a-zA-Z0-9._-]/g, '_')
+                    .slice(0, 100);
+
+                const filename = `diff-${safeUrl}-${Date.now()}.txt`;
+                const filePath = path.join(tmpDir, filename);
+                fs.writeFileSync(filePath, diffOutput, 'utf8');
+
+                let preview = diffOutput.length > 1800
+                    ? diffOutput.slice(0, 1800) + '\n... (see attached file for full diff)'
+                    : diffOutput;
+
                 dbDoc.contentHash = newHash;
                 dbDoc.lastChecked = new Date();
                 await dbDoc.save();
                 lastContent = newContent;
 
                 const user = await client.users.fetch(dbDoc.userId);
-                await user.send(
-                    `Psst, Ali sees **${dbDoc.url}** has changed!\nHere's the tea:\n` +
-                    '```diff\n' + diffOutput + '```'
-                );
+                const attachment = new AttachmentBuilder(filePath, { name: filename });
+
+                await user.send({
+                    content: `Psst, Ali sees **${dbDoc.url}** has changed!\nHere's the tea:\n` +
+                        '```diff\n' + preview + '```',
+                    files: [attachment]
+                });
             }
         } catch (err) {
             console.error(`Watcher error (${doc.url}):`, err.message);
