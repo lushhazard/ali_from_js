@@ -110,7 +110,7 @@ function startWatcher(client, doc, initialContent) {
                     }
                 }
 
-                const tmpDir = path.join(__dirname, '../../tmp');
+                const tmpDir = `./tmp/`;
                 if (!fs.existsSync(tmpDir)) {
                     fs.mkdirSync(tmpDir, { recursive: true });
                 }
