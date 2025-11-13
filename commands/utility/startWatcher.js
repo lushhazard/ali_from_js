@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const axios = require('axios');
 const { diffLines } = require('diff');
 const Watcher = require('../../models/watcherSchema.js');
+const fs = require('fs');
 
 const activeWatchers = new Map(); // memory cache: url+userId → interval handle
 
