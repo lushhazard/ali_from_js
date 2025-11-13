@@ -169,7 +169,7 @@ function sanitizeHTML(html) {
         .replace(/<[^>]+>/g, '')                  // remove all other tags
         .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/g, '')
         .replace(/\b\d{10,13}\b/g, '')
-        .replace(/\s+/g, ' ')
+        .replace(/[ \t]+/g, ' ')
         .trim();
 }
 
