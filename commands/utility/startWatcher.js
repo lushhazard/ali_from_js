@@ -111,19 +111,19 @@ function startWatcher(client, doc, initialContent) {
                     }
                 }
 
-                const tmpDir = `./tmp/`;
-                if (!fs.existsSync(tmpDir)) {
-                    fs.mkdirSync(tmpDir, { recursive: true });
-                }
-
                 const safeUrl = doc.url
                     .replace(/^https?:\/\//i, '')
                     .replace(/[^a-zA-Z0-9._-]/g, '_')
                     .slice(0, 100);
 
                 const filename = `diff-${safeUrl}-${Date.now()}.txt`;
-                const filePath = path.join(tmpDir, filename);
-                fs.writeFileSync(filePath, diffOutput, 'utf8');
+
+                const tmpDir = `./tmp/`;
+                if (!fs.existsSync(tmpDir)) {
+                    fs.mkdirSync(tmpDir, { recursive: true });
+                }
+                const outputPath = `${tmpDir}/${filename}.txt`;
+                fs.writeFileSync(outputPath, diffOutput, 'utf8');
 
                 let preview = diffOutput.length > 1800
                     ? diffOutput.slice(0, 1800) + '\n... (see attached file for full diff)'
@@ -135,7 +135,7 @@ function startWatcher(client, doc, initialContent) {
                 lastContent = newContent;
 
                 const user = await client.users.fetch(dbDoc.userId);
-                const attachment = new AttachmentBuilder(filePath, { name: filename });
+                const attachment = new AttachmentBuilder(outputPath, { name: filename });
 
                 await user.send({
                     content: `Psst, Ali sees **${dbDoc.url}** has changed!\nHere's the tea:\n` +
