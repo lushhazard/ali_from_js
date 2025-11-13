@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const axios = require('axios');
 const { diffLines } = require('diff');
 const Watcher = require('../../models/watcherSchema.js');
