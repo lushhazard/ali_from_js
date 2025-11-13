@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { MessageFlags, SlashCommandBuilder } = require('discord.js');
 const Watcher = require('../../models/watcherSchema.js');
 
 const activeWatchers = require('./startWatcher.js').activeWatchers;
@@ -28,7 +28,7 @@ module.exports = {
         const url = interaction.options.getString('url');
         const userId = interaction.user.id;
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const result = await Watcher.findOneAndDelete({ userId, url });
         if (result) {

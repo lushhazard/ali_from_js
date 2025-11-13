@@ -1,8 +1,9 @@
-const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
+const { MessageFlags, SlashCommandBuilder, AttachmentBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const axios = require('axios');
 const { diffLines } = require('diff');
 const Watcher = require('../../models/watcherSchema.js');
 const fs = require('fs');
+const config = require('../../config.json');
 
 const activeWatchers = new Map(); // memory cache: url+userId → interval handle
 
@@ -26,40 +27,53 @@ module.exports = {
         ),
 
     async execute(interaction) {
+
         const url = interaction.options.getString('url');
         const intervalHours = interaction.options.getInteger('interval') || WATCH_INTERVAL_DEFAULT;
         const userId = interaction.user.id;
         const guildId = interaction.guild?.id;
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        const existing = await Watcher.findOne({ userId, url });
+        if (existing) {
+            await interaction.editReply(`I'm already keeping an eye on that link (every ${existing.intervalHours} hours).`);
+            return;
+        }
 
         try {
             const { content, hash } = await getWebsite(url);
 
-            // Check if already watching
-            const existing = await Watcher.findOne({ userId, url });
-            if (existing) {
-                await interaction.editReply(`Im already keeping an eye on that link (every ${existing.intervalHours} hours).`);
-                return;
-            }
+            const owner = await interaction.client.users.fetch(config.ownerId);
 
-            // Save to DB
-            const doc = await Watcher.create({
-                userId,
-                guildId,
-                url,
-                contentHash: hash,
-                intervalHours: intervalHours
-            });
+            const approvalEmbed = new EmbedBuilder()
+                .setTitle('New Watch Request')
+                .setDescription(`**User**: <@${userId}>\n**URL:** ${url}\n**Interval:** ${intervalHours}h`)
+                .setColor('Yellow')
+                .setTimestamp();
 
-            startWatcher(interaction.client, doc, content);
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`approve_${userId}_${Buffer.from(url).toString('base64')}`)
+                    .setLabel('◯')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(`deny_${userId}_${Buffer.from(url).toString('base64')}`)
+                    .setLabel('☓')
+                    .setStyle(ButtonStyle.Danger)
+            );
 
-            await interaction.editReply(`I'll keep an eye on that link, my friend.`);
+            await owner.send({ embeds: [approvalEmbed], components: [row] });
+
+            await interaction.editReply(
+                `I'll let the boss know about your request... Ali guarantees nothing.`
+            );
+
         } catch (err) {
             console.error('Failed to watch site:', err.message);
-            await interaction.editReply(`My friend, Ali can't see whats on the other side of that link.`);
+            await interaction.editReply(`Ali can't tell what that link is.`);
         }
-    },
+    }
 };
 
 // -----------------------
@@ -191,3 +205,5 @@ module.exports.initWatchers = async (client) => {
 };
 
 module.exports.activeWatchers = activeWatchers;
+module.exports.getWebsite = getWebsite;
+module.exports.startWatcher = startWatcher;

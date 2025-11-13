@@ -2,7 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
 const config = require('./config.json');
-const { initWatchers } = require('./commands/utility/startWatcher.js');
+const { initWatchers, startWatcher, getWebsite } = require('./commands/utility/startWatcher.js');
+const Watcher = require('./models/watcherSchema.js');
 const mongoose = require('mongoose');
 
 mongoose.connect(config.mongoURI, {
@@ -50,6 +51,7 @@ client.once(Events.ClientReady, async readyClient => {
 });
 // command event handler
 client.on(Events.InteractionCreate, async interaction => {
+
     if (interaction.isChatInputCommand()) {
         const command = interaction.client.commands.get(interaction.commandName);
 
@@ -87,6 +89,48 @@ client.on(Events.InteractionCreate, async interaction => {
                 await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
             }
         }
+    }
+
+    if (interaction.isButton()) { // button..!
+        const [action, userId, encodedUrl] = interaction.customId.split('_');
+        const url = Buffer.from(encodedUrl, 'base64').toString('utf8');
+
+        if (interaction.user.id !== config.ownerId) {
+            await interaction.reply({ content: "nuh uh!", flags: MessageFlags.Ephemeral });
+            return;
+        }
+
+        if (action === 'approve') {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            try {
+                const { content, hash } = await getWebsite(url);
+
+                const doc = await Watcher.create({
+                    userId,
+                    guildId: null,
+                    url,
+                    contentHash: hash,
+                    intervalHours: 24
+                });
+
+                startWatcher(interaction.client, doc, content);
+
+                await interaction.editReply(`Approved and started watching **${url}** for <@${userId}>.`);
+                const user = await interaction.client.users.fetch(userId);
+                await user.send(`Boss says he approved your watch request for ${url}, my friend.`);
+            } catch (err) {
+                console.error('Approval failed:', err);
+                await interaction.editReply(`Error starting watcher: ${err.message}`);
+            }
+        }
+
+        if (action === 'deny') {
+            await interaction.reply({ content: `Denied watcher request for **${url}**.`, flags: MessageFlags.Ephemeral });
+            const user = await interaction.client.users.fetch(userId);
+            await user.send(`Boss says your request to watch ${url} is a no-go.`);
+        }
+
+        return; // exit so command handling doesn't run
     }
 });
 client.login(config.token);
