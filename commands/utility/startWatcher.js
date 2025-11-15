@@ -4,7 +4,7 @@ const { diffLines } = require('diff');
 const Watcher = require('../../models/watcherSchema.js');
 const fs = require('fs');
 const config = require('../../config.json');
-const { v4: uuidv4 } = require('uuid'); // npm install uuid
+const crypto = require('node:crypto');
 const pendingApprovals = require('../../index.js');
 
 const activeWatchers = new Map(); // memory cache: url+userId → interval handle
@@ -33,7 +33,7 @@ module.exports = {
         const url = interaction.options.getString('url');
         const intervalHours = interaction.options.getInteger('interval') || WATCH_INTERVAL_DEFAULT;
         const userId = interaction.user.id;
-        const requestId = uuidv4();
+        const requestId = crypto.randomUUID();
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const existing = await Watcher.findOne({ userId, url });
@@ -45,7 +45,7 @@ module.exports = {
         try {
             const owner = await interaction.client.users.fetch(config.ownerId);
 
-            pendingApprovals.set(requestId, { userId, url, intervalHours });
+            interaction.client.pendingApprovals.set(requestId, { userId, url, intervalHours });
 
             const approvalEmbed = new EmbedBuilder()
                 .setTitle('New Watch Request')
