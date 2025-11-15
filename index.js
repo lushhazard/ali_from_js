@@ -113,7 +113,7 @@ client.on(Events.InteractionCreate, async interaction => {
         if (action === 'approve') {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             try {
-                const { content, contentHash } = await getWebsite(url);
+                const { content, hash: contentHash } = await getWebsite(url);
 
                 const doc = await Watcher.create({
                     userId,
