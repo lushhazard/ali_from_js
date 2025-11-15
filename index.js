@@ -5,6 +5,8 @@ const config = require('./config.json');
 const { initWatchers, startWatcher, getWebsite } = require('./commands/utility/startWatcher.js');
 const Watcher = require('./models/watcherSchema.js');
 const mongoose = require('mongoose');
+const pendingApprovals = new Map();
+module.exports = pendingApprovals;
 
 mongoose.connect(config.mongoURI, {
 }).then(() => console.log('Connected to MongoDB'))
@@ -92,8 +94,14 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     if (interaction.isButton()) { // button..!
-        const [action, userId, encodedUrl] = interaction.customId.split('_');
-        const url = Buffer.from(encodedUrl, 'base64').toString('utf8');
+        const [action, requestId] = interaction.customId.split('_');
+        const request = pendingApprovals.get(requestId);
+
+        if (!request) {
+            await interaction.reply({ content: 'Ali is having trouble finding your request.', flags: MessageFlags.Ephemeral });
+            return;
+        }
+        const { userId, url, intervalHours } = request;
 
         if (interaction.user.id !== config.ownerId) {
             await interaction.reply({ content: "nuh uh!", flags: MessageFlags.Ephemeral });
@@ -103,14 +111,14 @@ client.on(Events.InteractionCreate, async interaction => {
         if (action === 'approve') {
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             try {
-                const { content, hash } = await getWebsite(url);
+                const { content, contentHash } = await getWebsite(url);
 
                 const doc = await Watcher.create({
                     userId,
                     guildId: null,
                     url,
-                    contentHash: hash,
-                    intervalHours: 24
+                    contentHash,
+                    intervalHours
                 });
 
                 startWatcher(interaction.client, doc, content);
@@ -130,7 +138,8 @@ client.on(Events.InteractionCreate, async interaction => {
             await user.send(`Boss says your request to watch ${url} is a no-go.`);
         }
 
-        return; // exit so command handling doesn't run
+        pendingApprovals.delete(requestId);
+        return;
     }
 });
 client.login(config.token);

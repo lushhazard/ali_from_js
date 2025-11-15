@@ -4,6 +4,8 @@ const { diffLines } = require('diff');
 const Watcher = require('../../models/watcherSchema.js');
 const fs = require('fs');
 const config = require('../../config.json');
+const { v4: uuidv4 } = require('uuid'); // npm install uuid
+const pendingApprovals = require('../../index.js');
 
 const activeWatchers = new Map(); // memory cache: url+userId → interval handle
 
@@ -31,8 +33,7 @@ module.exports = {
         const url = interaction.options.getString('url');
         const intervalHours = interaction.options.getInteger('interval') || WATCH_INTERVAL_DEFAULT;
         const userId = interaction.user.id;
-        const guildId = interaction.guild?.id;
-
+        const requestId = uuidv4();
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         const existing = await Watcher.findOne({ userId, url });
@@ -42,9 +43,9 @@ module.exports = {
         }
 
         try {
-            const { content, hash } = await getWebsite(url);
-
             const owner = await interaction.client.users.fetch(config.ownerId);
+
+            pendingApprovals.set(requestId, { userId, url, intervalHours });
 
             const approvalEmbed = new EmbedBuilder()
                 .setTitle('New Watch Request')
@@ -54,11 +55,11 @@ module.exports = {
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`approve_${userId}_${Buffer.from(url).toString('base64')}`)
+                    .setCustomId(`approve_${requestId}`)
                     .setLabel('◯')
                     .setStyle(ButtonStyle.Success),
                 new ButtonBuilder()
-                    .setCustomId(`deny_${userId}_${Buffer.from(url).toString('base64')}`)
+                    .setCustomId(`deny_${requestId}`)
                     .setLabel('☓')
                     .setStyle(ButtonStyle.Danger)
             );
