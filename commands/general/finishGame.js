@@ -126,6 +126,7 @@ async function handleGameFinish(interaction, gameName, gameTimeSeconds) {
                 });
             }
             else if (customId === 'done') {
+                console.log('elapsed since click:', Date.now() - collectedInteraction.createdTimestamp, 'ms');
                 if (collector.ended || doneHandled) return;
                 if (!winners.length || !losers.length) {
                     return collectedInteraction.reply({

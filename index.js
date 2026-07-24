@@ -96,6 +96,9 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     if (interaction.isButton()) { // button..!
+        if (!interaction.customId.startsWith('approve_') && !interaction.customId.startsWith('deny_')) {
+            return;
+        }
         const [action, requestId] = interaction.customId.split('_');
         const request = interaction.client.pendingApprovals.get(requestId);
 
