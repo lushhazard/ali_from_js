@@ -99,6 +99,7 @@ async function handleGameFinish(interaction, gameName, gameTimeSeconds) {
 
     let winners = [];
     let losers = [];
+    let doneHandled = false;
 
     collector.on('collect', async (collectedInteraction) => {
         try {
@@ -125,6 +126,7 @@ async function handleGameFinish(interaction, gameName, gameTimeSeconds) {
                 });
             }
             else if (customId === 'done') {
+                if (collector.ended || doneHandled) return;
                 if (!winners.length || !losers.length) {
                     return collectedInteraction.reply({
                         content: `
@@ -134,7 +136,7 @@ async function handleGameFinish(interaction, gameName, gameTimeSeconds) {
                         flags: MessageFlags.Ephemeral
                     });
                 }
-                // まず即座に ack する(3秒ルールをクリア)
+                doneHandled = true;
                 await collectedInteraction.deferUpdate();
 
                 let botId = interaction.client.user.id;
