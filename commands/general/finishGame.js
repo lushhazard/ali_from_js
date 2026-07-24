@@ -1,4 +1,4 @@
-const { ActionRowBuilder, UserSelectMenuBuilder, SlashCommandBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+
 const GameLog = require('../../models/gameLogSchema');
 const GameDetails = require('../../models/gameDetailsSchema');
 const getGameModel = require('../../models/scoreboardSchema');
@@ -91,9 +91,9 @@ async function handleGameFinish(interaction, gameName, gameTimeSeconds) {
         content: 'Please tell me who the winners and losers were for this game, then press **Done**.',
         components: [row1, row2, row3],
     });
-
+    const reply = await interaction.fetchReply();
     // Collector to handle user interactions
-    const collector = interaction.channel.createMessageComponentCollector({
+    const collector = reply.createMessageComponentCollector({
         time: 120000, // 2-minute timeout
     });
 
@@ -101,53 +101,61 @@ async function handleGameFinish(interaction, gameName, gameTimeSeconds) {
     let losers = [];
 
     collector.on('collect', async (collectedInteraction) => {
-        const { customId, values, user } = collectedInteraction;
+        try {
+            const { customId, values, user } = collectedInteraction;
 
-        if (!(user.id === interaction.user.id)) {
-            return collectedInteraction.reply({
-                content: `-# Psst, my friend, don't meddle in other people's business. Go play a game or something.`,
-                flags: MessageFlags.Ephemeral
-            });
-        }
-        if (customId === 'winners') {
-            winners = values;
-            await collectedInteraction.update({
-                content: `✔ **Winners selected:** ${winners.map(v => `<@${v}>`).join(', ')}`,
-                components: [row1, row2, row3],
-            });
-        }
-        else if (customId === 'losers') {
-            losers = values;
-            await collectedInteraction.update({
-                content: `✔ **Losers selected:** ${losers.map(p => `<@${p}>`).join(', ')}`,
-                components: [row1, row2, row3],
-            });
-        }
-        else if (customId === 'done') {
-            if (!winners.length || !losers.length) {
+            if (!(user.id === interaction.user.id)) {
                 return collectedInteraction.reply({
-                    content: `
-My friend! Please tell me about the winners *and* losers before finishing!\n
-If you intended for there to be no winners or no losers, put Ali there. I will take care of it.
-`,
+                    content: `-# Psst, my friend, don't meddle in other people's business. Go play a game or something.`,
                     flags: MessageFlags.Ephemeral
                 });
             }
-            // filter to make sure this bot is not in the winner or loser
-            // this allows for no winners and no losers (preferable to not checking imo)
-            let botId = interaction.client.user.id;
-            losers = losers.filter(playerId => !(playerId === botId));
-            winners = winners.filter(playerId => !(playerId === interaction.client.user.id));
-            losers = losers.filter(playerId => !winners.includes(playerId));
+            if (customId === 'winners') {
+                winners = values;
+                await collectedInteraction.update({
+                    content: `✔ **Winners selected:** ${winners.map(v => `<@${v}>`).join(', ')}`,
+                    components: [row1, row2, row3],
+                });
+            }
+            else if (customId === 'losers') {
+                losers = values;
+                await collectedInteraction.update({
+                    content: `✔ **Losers selected:** ${losers.map(p => `<@${p}>`).join(', ')}`,
+                    components: [row1, row2, row3],
+                });
+            }
+            else if (customId === 'done') {
+                if (!winners.length || !losers.length) {
+                    return collectedInteraction.reply({
+                        content: `
+	My friend! Please tell me about the winners *and* losers before finishing!\n
+	If you intended for there to be no winners or no losers, put Ali there. I will take care of it.
+	`,
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+                // まず即座に ack する(3秒ルールをクリア)
+                await collectedInteraction.deferUpdate();
 
-            await registerGameResults(winners, losers, interaction, gameName, gameTimeSeconds);
-            await updateScoreboard(winners, losers, interaction, gameName, gameTimeSeconds);
-            let completionMessage = await generateCompletionMessage(winners, losers);
-            await collectedInteraction.update({
-                content: completionMessage,
-                components: [],
-            });
-            collector.stop();
+                let botId = interaction.client.user.id;
+                losers = losers.filter(playerId => !(playerId === botId));
+                winners = winners.filter(playerId => !(playerId === interaction.client.user.id));
+                losers = losers.filter(playerId => !winners.includes(playerId));
+
+                await registerGameResults(winners, losers, interaction, gameName, gameTimeSeconds);
+                await updateScoreboard(winners, losers, interaction, gameName, gameTimeSeconds);
+                let completionMessage = await generateCompletionMessage(winners, losers);
+
+                // deferUpdate した後は editReply で本文を書き換える
+                await collectedInteraction.editReply({
+                    content: completionMessage,
+                    components: [],
+                });
+                collector.stop();
+            }
+        } catch (err) {
+            console.error('Error handling collected interaction:', err);
+            // ここで落とさず、ログだけ残して処理を続ける
         }
     });
 
@@ -286,3 +294,4 @@ I've written down the results!\n
     }
     return compMessage;
 }
+
