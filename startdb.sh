@@ -1,2 +1,3 @@
 #!/bin/sh
-mongod --dbpath ./db/ --quiet
+mongod --dbpath ./db/ --quiet --logpath ./db/log
+
